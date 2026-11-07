@@ -68,6 +68,16 @@ Post sermons and clips to the church's **YouTube** channel or **TikTok**, then a
 - **SMS is optional and paid.** Open an [Africa's Talking](https://africastalking.com) account, buy SMS credit, and ask for a sender ID (for example `PHOMI`). Fill in `sms` in `phomi-config.php` (`provider` = `africastalking`, `username`, `api_key`, `sender_id`), then switch on *Send the verse by SMS* in Settings. Test first with *Send today's verse to numbers* in **Admin → SMS list**. Without an account, the free *Send to a number* button on the site still works: it opens the reader's own SMS or WhatsApp app with the verse typed in.
 - **WhatsApp Channel:** create a Channel from the church's WhatsApp, and put its link in **Admin → Settings → Bible, verse emails and SMS**. WhatsApp does not allow automatic posting to a Channel, so each morning use **Admin → Daily verses → Today**: copy the text or download the picture, and post it.
 
+## 9. The private copy of the lists
+
+People sign up with an email address, a phone number, or both. A phone number can ask for the SMS verse, for a call from the church, or both. No visitor ever makes a password.
+
+In **Admin → Settings → Lists and sign-ups**, enter a **private email address**, such as the pastor's own Gmail, not the website mailbox. That address then gets:
+
+- an email for each new sign-up. When someone ticks *Please call me*, the subject starts with "Please call:"
+- both lists as spreadsheets every Monday morning (switch this off in the same place)
+- both lists at any time, from **Email both lists now** in Admin → Email list or Phone list.
+
 ## Troubleshooting
 
 | Problem | Fix |

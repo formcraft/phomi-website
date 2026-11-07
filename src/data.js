@@ -129,5 +129,7 @@ export const BUILD_STEPS = [
 // are full paths under /uploads, and are used as they are.
 const isPath = (name) => /^(\/|https?:)/.test(name);
 export const img = (name) => (isPath(name) ? name : `/img/${name}.jpg`);
+// Phones get the 640px copy in /img/sm (about a fifth of the size); bigger screens the full photo
+export const srcSet = (name) => (isPath(name) ? undefined : `/img/sm/${name}.jpg 640w, /img/${name}.jpg 1080w`);
 export const video = (name) => (isPath(name) ? name : `/video/${name}.mp4`);
 export const fmt = (n) => Number(n).toLocaleString('en-US');

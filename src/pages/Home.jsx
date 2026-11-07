@@ -8,25 +8,31 @@ import { CHURCH, img, video } from '../data.js';
 import { Subscribe, VerseCard } from '../components/Verse.jsx';
 import { useLive } from '../live.jsx';
 
+// Phones get a 1 MB copy of the background video. With Data Saver on, or on a slow connection,
+// the video doesn't load at all until the visitor presses play.
+const phone = () => window.matchMedia?.('(max-width: 760px)').matches;
+const saveData = () => { const c = navigator.connection; return !!c && (c.saveData || /(^|-)2g|3g/.test(c.effectiveType || '')); };
+
 function Hero() {
   const ref = useRef();
   const [playing, setPlaying] = useState(true);
+  const [src, setSrc] = useState(null);
   useEffect(() => {
-    const v = ref.current;
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) { setPlaying(false); return; }
-    v.play()?.catch(() => setPlaying(false));
+    const pick = video(phone() ? 'hero-sm' : 'hero');
+    if (reduce || saveData()) { setPlaying(false); ref.current.dataset.src = pick; return; }
+    setSrc(pick);
   }, []);
+  useEffect(() => { if (src) ref.current.play()?.catch(() => setPlaying(false)); }, [src]);
   const toggle = () => {
     const v = ref.current;
+    if (!src && v.dataset.src) { setSrc(v.dataset.src); setPlaying(true); return; }
     if (v.paused) { v.play().catch(() => {}); setPlaying(true); } else { v.pause(); setPlaying(false); }
   };
   return (
     <section className="hero band">
       <img className="poster" src={img('hero-poster')} alt="" />
-      <video ref={ref} muted loop playsInline preload="metadata" poster={img('hero-poster')} aria-hidden="true">
-        <source src={video('hero')} type="video/mp4" />
-      </video>
+      <video ref={ref} muted loop playsInline preload="none" poster={img('hero-poster')} aria-hidden="true" src={src || undefined} />
       <div className="in">
         <Seal className="seal-hero" size={180} label="Potter's House Outreach Ministries International seal" />
         <p className="eyebrow">{CHURCH.tagline}</p>

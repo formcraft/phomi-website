@@ -33,6 +33,12 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      - name: Browser tests (desktop, phones, offline and security checks)
+        run: |
+          npx playwright install --with-deps chromium
+          node scripts/test-site.mjs
+          node scripts/test-phone.mjs
+
       # Uploads the built site (dist/, including dist/api) to public_html on Hostinger.
       # Needs repository secrets FTP_SERVER, FTP_USERNAME and FTP_PASSWORD
       # (Hostinger hPanel → Files → FTP Accounts). Skipped until they are set, and never on pull requests.

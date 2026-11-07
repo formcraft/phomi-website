@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Banner, usePhotoViewer } from '../components/ui.jsx';
-import { GALLERY_CATS, PHOTOS, img } from '../data.js';
+import { GALLERY_CATS, PHOTOS, img, srcSet } from '../data.js';
 import { useLive } from '../live.jsx';
 
 export default function Gallery() {
@@ -23,7 +23,7 @@ export default function Gallery() {
           <div className="masonry">
             {list.map(([n, alt, c, thumb]) => (
               <button key={n} type="button" onClick={() => view(n, list)} aria-label={`View photo: ${alt}`}>
-                <img src={thumb || img(n)} alt={alt} loading="lazy" decoding="async" />
+                <img src={thumb || img(n)} srcSet={thumb ? undefined : srcSet(n)} sizes="(max-width: 640px) 50vw, 25vw" alt={alt} loading="lazy" decoding="async" />
                 <span className="lbl">{c}</span>
               </button>
             ))}

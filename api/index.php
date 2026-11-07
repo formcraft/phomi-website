@@ -112,7 +112,16 @@ function route(string $method, string $path): void
         } catch (Throwable $e) {
             $r = ['ok' => false, 'message' => $e->getMessage()];
         }
-        $r['letters'] = letters_tick();
+        try {
+            $r['letters'] = letters_tick();
+        } catch (Throwable $e) {
+            $r['letters'] = ['ok' => false, 'message' => $e->getMessage()];
+        }
+        try {
+            $r['lists'] = lists_tick();
+        } catch (Throwable $e) {
+            $r['lists'] = ['ok' => false, 'message' => $e->getMessage()];
+        }
         json_out($r);
         return;
     }
@@ -263,20 +272,23 @@ function route(string $method, string $path): void
         json_out(['ok' => true, 'sent' => $n]);
         return;
     }
-    if ($method === 'GET' && $sub === '/sms_contacts.csv') {
+    if ($method === 'GET' && ($sub === '/sms_contacts.csv' || $sub === '/subscribers.csv')) {
+        $kind = $sub === '/sms_contacts.csv' ? 'phones' : 'emails';
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="phomi-sms-list.csv"');
-        $out = fopen('php://output', 'w');
-        fputcsv($out, ['phone', 'name', 'daily', 'status', 'added']);
-        foreach (rows('SELECT phone, name, daily, status, created_at FROM sms_contacts ORDER BY id') as $r) fputcsv($out, array_values($r));
+        header('Cache-Control: no-store');
+        header('Content-Disposition: attachment; filename="phomi-' . ($kind === 'phones' ? 'phone' : 'email') . '-list.csv"');
+        echo lists_csv($kind);
         return;
     }
-    if ($method === 'GET' && $sub === '/subscribers.csv') {
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="phomi-email-list.csv"');
-        $out = fopen('php://output', 'w');
-        fputcsv($out, ['email', 'name', 'daily', 'weekly', 'status', 'signed up', 'confirmed']);
-        foreach (rows('SELECT email, name, daily, weekly, status, created_at, confirmed_at FROM subscribers ORDER BY id') as $r) fputcsv($out, array_values($r));
+    if ($method === 'GET' && $sub === '/lists') {
+        json_out(['counts' => lists_counts(), 'to' => lists_email_to(), 'private' => trim(setting('lists_email')) !== '', 'weekly' => setting('lists_weekly') === '1', 'sent_on' => setting('lists_sent_on')]);
+        return;
+    }
+    if ($method === 'POST' && $sub === '/lists/send') {
+        rate_limit('lists-send:' . client_ip(), 5, 60);
+        $r = lists_send('now');
+        log_change('settings', 'lists', null, null, null, 'Emailed the email and phone lists to the private address');
+        json_out($r);
         return;
     }
     if ($method === 'GET' && $sub === '/changes') {

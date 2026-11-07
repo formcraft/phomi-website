@@ -28,4 +28,10 @@ try {
     fwrite(STDERR, date('c') . ' verse emails failed: ' . $e->getMessage() . "\n");
     $failed = true;
 }
+try {
+    if ($w = lists_tick()) echo date('c') . " lists emailed to the private address\n";
+} catch (Throwable $e) {
+    fwrite(STDERR, date('c') . ' lists email failed: ' . $e->getMessage() . "\n");
+    $failed = true;
+}
 exit($failed ? 1 : 0);

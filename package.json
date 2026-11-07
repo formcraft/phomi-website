@@ -7,16 +7,22 @@
     "dev": "vite",
     "build": "vite build && node scripts/copy-api.mjs",
     "preview": "vite preview",
+    "local": "node scripts/local-server.mjs",
+    "test:phone": "node scripts/test-phone.mjs",
     "test:api": "python3 api/tests/test_api.py",
     "test:site": "node scripts/test-site.mjs"
   },
   "dependencies": {
+    "@fontsource/cinzel": "5.2.6",
+    "@fontsource/playfair-display": "5.2.6",
+    "@fontsource/poppins": "5.2.6",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-router-dom": "6.30.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.7.0",
+    "playwright": "1.63.0",
     "vite": "6.4.1"
   }
 }

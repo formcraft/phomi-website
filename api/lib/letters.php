@@ -14,23 +14,36 @@ function subscribe_start(array $b): array
     $name = str_in($b, 'name', 120);
     $phoneRaw = str_in($b, 'phone', 30);
     $wantsSms = !empty($b['sms']) && $phoneRaw !== '';
-    if ($email === '' && !$wantsSms) throw new ApiError(422, 'Enter your email address, or your phone number for the SMS verse.');
+    $wantsCall = !empty($b['call']) && $phoneRaw !== '';
+    if ((!empty($b['sms']) || !empty($b['call'])) && $phoneRaw === '') throw new ApiError(422, 'Add your phone number, so we can send the SMS or call you.');
+    if ($email === '' && !$wantsSms && !$wantsCall) throw new ApiError(422, 'Enter your email address, or your phone number for the SMS verse or a call.');
     if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) throw new ApiError(422, 'Please enter a valid email address.');
     $daily = !empty($b['daily']) ? 1 : 0;
     $weekly = !empty($b['weekly']) ? 1 : 0;
     if ($email !== '' && !$daily && !$weekly) throw new ApiError(422, 'Choose the daily verse, the weekly letter, or both.');
     rate_limit('subscribe:' . client_ip(), 6, 60);
     $smsMsg = '';
-    if ($wantsSms) {
+    $phone = '';
+    $wants = [];
+    if ($wantsSms || $wantsCall) {
         $phone = sms_phone($phoneRaw);
         if (!$phone) throw new ApiError(422, 'That phone number was not understood. Write it like 0772 123456, or with + and the country code.');
         $c = row('SELECT * FROM sms_contacts WHERE phone = ?', [$phone]);
-        if ($c) q("UPDATE sms_contacts SET status = 'active', daily = 1, name = ? WHERE id = ?", [$name ?: $c['name'], $c['id']]);
-        else insert('sms_contacts', ['phone' => $phone, 'name' => $name, 'daily' => 1, 'status' => 'active', 'source' => 'website', 'created_at' => now()]);
-        $smsMsg = ' Your number is on the SMS list.';
+        $daily = $wantsSms ? 1 : (int)($c['daily'] ?? 0);
+        $call = $wantsCall ? 1 : (int)($c['call_me'] ?? 0);
+        if ($c) q("UPDATE sms_contacts SET status = 'active', daily = ?, call_me = ?, name = ? WHERE id = ?", [$daily, $call, $name ?: $c['name'], $c['id']]);
+        else insert('sms_contacts', ['phone' => $phone, 'name' => $name, 'daily' => $daily, 'call_me' => $call, 'status' => 'active', 'source' => 'website', 'created_at' => now()]);
+        if ($wantsSms) $wants[] = 'the Verse of the Day by SMS';
+        if ($wantsCall) $wants[] = 'a call from the church';
+        $smsMsg = $wantsCall ? ' Someone from the church will call you.' : ' Your number is on the SMS list.';
     }
-    if ($email === '') return ['ok' => true, 'message' => 'Thank you. Your number is on the list for the Verse of the Day by SMS.'];
+    if ($email === '') {
+        lists_alert_signup(['name' => $name, 'email' => '', 'phone' => $phone, 'wants' => $wants]);
+        return ['ok' => true, 'message' => $wantsCall ? 'Thank you. Someone from the church will call you soon.' . ($wantsSms ? ' Your number is also on the SMS verse list.' : '') : 'Thank you. Your number is on the list for the Verse of the Day by SMS.'];
+    }
     rate_limit('subscribe:' . $email, 3, 60 * 24);
+    if (!empty($b['daily'])) $wants[] = 'the Verse of the Day by email';
+    if (!empty($b['weekly'])) $wants[] = 'the weekly letter';
 
     $s = row('SELECT * FROM subscribers WHERE email = ?', [$email]);
     if ($s && $s['status'] === 'active') {
@@ -48,6 +61,7 @@ function subscribe_start(array $b): array
         send_mail($email, 'Please confirm: verse emails from Potter\'s House', "Hello" . ($name ? " $name" : '') . ",\n\nSomeone (we hope you) asked to receive $what from Potter's House Outreach Ministries International.\n\n"
             . "Confirm here:\n" . subscriber_link($s, 'confirm') . "\n\nIf this wasn't you, ignore this email and nothing will be sent.\n\nPotter's House Outreach Ministries International");
     }
+    if (!$s || $s['status'] !== 'active') lists_alert_signup(['name' => $name, 'email' => $email, 'phone' => $phone, 'wants' => $wants]);
     return ['ok' => true, 'message' => 'Almost done. We sent you an email: open it and press Confirm.' . $smsMsg];
 }
 

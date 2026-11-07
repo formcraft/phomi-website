@@ -8,7 +8,7 @@ function session_begin(): void
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',
-        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https',
         'httponly' => true,
         'samesite' => 'Strict',
     ]);

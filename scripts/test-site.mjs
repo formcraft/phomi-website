@@ -17,7 +17,7 @@ const tmp = mkdtempSync(join(tmpdir(), 'phomi-site-'));
 const web = join(tmp, 'public_html');
 mkdirSync(web);
 for (const f of readdirSync(join(ROOT, 'dist'))) if (f !== 'api') cpSync(join(ROOT, 'dist', f), join(web, f), { recursive: true });
-symlinkSync(join(ROOT, 'api'), join(web, 'api'));
+symlinkSync(join(ROOT, 'api'), join(web, 'api'), 'junction');
 const cfg = join(tmp, 'config.php');
 writeFileSync(cfg, `<?php return ['debug'=>true,'site_url'=>'${BASE}','app_key'=>str_repeat('k',40),'install_token'=>'install-token-123',
 'db'=>['dsn'=>'sqlite:${tmp}/site.db','user'=>null,'pass'=>null],'uploads_dir'=>'${web}/uploads','uploads_url'=>'/uploads',

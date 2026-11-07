@@ -22,7 +22,7 @@ function page(string $body): void
 }
 
 if ($expected === '' || strlen($expected) < 12) page('<p>Add an <b>install_token</b> (at least 12 characters) to phomi-config.php first.</p>');
-if (!hash_equals($expected, $token)) page('<p>This setup link is not valid.</p>');
+if (!hash_equals($expected, $token)) { http_response_code(403); page('<p>This setup link is not valid.</p>'); }
 
 $checks = [
     'PHP 8.1 or newer' => version_compare(PHP_VERSION, '8.1.0', '>='),

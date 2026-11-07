@@ -313,6 +313,24 @@ try:
     code, r = call('GET', '/api/admin/r/sms_contacts')
     check('SMS list keeps numbers in one format', sorted(x['phone'] for x in r['items']) == ['+256701999888', '+256772111222'], r)
 
+    # ---- Phone-only "please call me", and the private copy of the lists ----
+    code, r = call('POST', '/api/subscribe', {'call': True}, admin=False)
+    check('"please call me" needs a phone number', code == 422 and 'phone' in r.get('error', '').lower(), r)
+    call('POST', '/api/admin/settings', {'lists_email': 'private.list@gmail.test'})
+    code, r = call('POST', '/api/subscribe', {'name': '=HYPERLINK("http://bad")', 'phone': '0782 333444', 'call': True}, admin=False)
+    check('phone-only "please call me" sign-up', code == 200 and 'call you' in r['message'], r)
+    log = open(mail_log).read()
+    check('the private list address hears about the new sign-up', 'To: private.list@gmail.test' in log and 'Please call: ' in base64_subjects(log) and '+256782333444' in log, log[-500:])
+    code, r = call('GET', '/api/admin/lists')
+    check('admin sees the list counts and the private address', code == 200 and r['counts']['call'] == 1 and r['to'] == 'private.list@gmail.test' and r['private'], r)
+    code, r = call('POST', '/api/admin/lists/send', {})
+    log = open(mail_log).read()
+    check('both lists are emailed to the private address', code == 200 and r['sent_to'] == 1 and 'Attached: phomi-email-list-' in log and 'phomi-phone-list-' in log, r)
+    code, csv = call('GET', '/api/admin/sms_contacts.csv', raw=True)
+    check('a name can\'t run as a spreadsheet formula', code == 200 and "'=HYPERLINK" in csv and ',=HYPERLINK' not in csv, csv[:300])
+    code, r = call('GET', '/api/content', admin=False)
+    check('the private list address is never public', 'private.list@gmail.test' not in json.dumps(r), '')
+
     call('POST', '/api/admin/settings', {'letters_on': '1', 'letters_time': '00:00', 'sms_on': '1'})
     code, L = call('GET', '/api/admin/letters')
     todays = [l for l in L['items'] if l['for_date'] == time.strftime('%Y-%m-%d')]
@@ -330,6 +348,7 @@ try:
     check('verse emails carry a one-click unsubscribe', 'List-Unsubscribe-Post: List-Unsubscribe=One-Click' in log, '')
     sms = open(os.path.join(tmp, 'sms.log')).read() if os.path.exists(os.path.join(tmp, 'sms.log')) else ''
     check('the daily verse goes out by SMS', '+256772111222' in sms and 'Psalm 23:1-3' in sms, sms[:300])
+    check('a "please call me" number gets no SMS it did not ask for', '+256782333444' not in sms, sms[:300])
     code, r = call('GET', '/api/cron/inbox?token=cron-token-123', admin=False)
     check('nobody gets the same email twice', r['letters']['sent'] == 0, r)
     code, r = call('POST', '/api/admin/sms/send', {'phones': '0775 123456'})
@@ -351,6 +370,9 @@ try:
     code, r = call('POST', '/api/admin/logout', {})
     code, r = call('GET', '/api/admin/stats')
     check('signed out', code == 401, r)
+    code, r = call('GET', '/api/admin/lists')
+    code2, csv = call('GET', '/api/admin/subscribers.csv', raw=True)
+    check('the lists need an admin sign-in', code == 401 and code2 == 401 and '@' not in csv, (code, code2))
 finally:
     server.terminate()
     err = server.stderr.read().decode()

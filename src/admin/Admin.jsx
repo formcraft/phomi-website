@@ -20,7 +20,7 @@ const SECTIONS = [
   ['verses', 'Daily verses', 'book'],
   ['letters', 'Verse emails & SMS', 'mail'],
   ['subscribers', 'Email list', 'users'],
-  ['sms_contacts', 'SMS list', 'phone'],
+  ['sms_contacts', 'Phone list', 'phone'],
   ['gifts', 'Giving', 'gift'],
   ['messages', 'Prayer & messages', 'chat'],
   ['senders', 'Approved senders', 'users'],
@@ -264,7 +264,10 @@ function ResourceSection({ res, schema }) {
         <Note>People on this list can email updates to the church update address. Others are ignored. Every emailed update waits in <a href="#inbox">Emailed updates</a> until an admin approves it.</Note>
       )}
       {res === 'subscribers' && (
-        <Note>People who signed up for the verse emails. New sign-ups show as <b>pending</b> until they press Confirm in the first email. <a href="/api/admin/subscribers.csv">Download the list (CSV)</a></Note>
+        <>
+          <Note>People who signed up for the verse emails. New sign-ups show as <b>pending</b> until they press Confirm in the first email. <a href="/api/admin/subscribers.csv">Download the list (CSV)</a></Note>
+          <PrivateLists />
+        </>
       )}
       {res === 'sms_contacts' && <SmsTools />}
       {res === 'videos' && (
@@ -292,7 +295,7 @@ function ResourceSection({ res, schema }) {
                 <span>
                   {[res === 'verses' ? (it.kind === 'week' ? 'Verse of the Week' : 'Verse of the Day') : null, res === 'verses' ? it.theme : null,
                     res === 'subscribers' ? [it.name, Number(it.daily) ? 'daily' : null, Number(it.weekly) ? 'weekly' : null, it.status].filter(Boolean).join(', ') : null,
-                    res === 'sms_contacts' ? [it.name, it.status].filter(Boolean).join(', ') : null,
+                    res === 'sms_contacts' ? [it.name, Number(it.call_me) ? 'please call' : null, Number(it.daily) ? 'SMS verse' : null, it.status].filter(Boolean).join(', ') : null,
                     res === 'photos' || res === 'videos' ? it.category : null, res === 'videos' ? linkName(it) : null, res === 'sermons' ? it.preacher : null, res === 'senders' ? it.name : null,
                     DATE_KEY[res] === 'starts_at' ? when(it.starts_at) : day(it[DATE_KEY[res]]),
                     it.source === 'email' ? 'by email' : null].filter(Boolean).join(' · ')}
@@ -513,13 +516,17 @@ const SETTING_GROUPS = [
     ['whatsapp', 'WhatsApp number', 'text', '+256 775 672 762'],
     ['email', 'Public email address', 'email', 'church@pottershouseoutreachministriesinternational.com']
   ]],
-  ['Bible, verse emails and SMS', 'The Verse of the Day comes from Daily verses. Emails go to the Email list; SMS go to the SMS list.', [
+  ['Bible, verse emails and SMS', 'The Verse of the Day comes from Daily verses. Emails go to the Email list; SMS go to the Phone list.', [
     ['bible_default', 'Bible translation shown first', 'select:kjv=King James Version (KJV)|web=World English Bible (WEB)', ''],
     ['letters_on', 'Send the verse emails', 'select:0=Off|1=On', ''],
     ['letters_mode', 'Before each email goes out', 'select:auto=Send as planned (you can pause any email)|approve=Wait for an admin to approve each one', ''],
     ['letters_time', 'Send at (Uganda time, 24-hour)', 'text', '06:00'],
     ['sms_on', 'Send the daily verse by SMS (needs an SMS account)', 'select:0=Off|1=On', ''],
     ['whatsapp_channel', 'Church WhatsApp Channel link', 'url', 'https://whatsapp.com/channel/…']
+  ]],
+  ['Lists and sign-ups', 'A private email address (not the website mailbox) that gets each new sign-up and a weekly copy of the email and phone lists. Only admins see it.', [
+    ['lists_email', 'Private list address', 'email', 'pastor.private@gmail.com'],
+    ['lists_weekly', 'Email both lists there every Monday', 'select:1=Yes|0=No', '']
   ]],
   ['Video and social pages', 'Links to the church pages. They show in the footer and on the Sermons page.', [
     ['youtube', 'YouTube channel', 'url', 'https://www.youtube.com/@yourchurch'],
@@ -766,11 +773,11 @@ function Letters() {
         <a href="#subscribers"><b>{s.active}</b><span>on the email list</span></a>
         <a href="#subscribers"><b>{s.daily}</b><span>get the daily verse</span></a>
         <a href="#subscribers"><b>{s.weekly}</b><span>get the weekly letter</span></a>
-        <a href="#sms_contacts"><b>{d.sms.contacts}</b><span>on the SMS list</span></a>
+        <a href="#sms_contacts"><b>{d.sms.contacts}</b><span>on the Phone list</span></a>
       </div>
       {!d.on && <Note>Verse emails are <b>off</b>. Turn them on in <a href="#settings">Settings</a> once the website email works.</Note>}
       {d.on && <Note>Emails go out at {d.time} each day{d.mode === 'approve' ? ', after an admin approves each one' : ' unless you pause them'}. Up to {d.per_hour} emails are sent per hour, so a long list takes a little while.</Note>}
-      {!d.sms.provider && <Note>SMS can't be sent automatically until the church opens an SMS account (see the setup guide). Until then, use the <a href="#sms_contacts">SMS list</a> to keep numbers, and the <b>Send to a number</b> button on the website.</Note>}
+      {!d.sms.provider && <Note>SMS can't be sent automatically until the church opens an SMS account (see the setup guide). Until then, use the <a href="#sms_contacts">Phone list</a> to keep numbers, and the <b>Send to a number</b> button on the website.</Note>}
       {info && <Note kind={info.kind}>{info.text}</Note>}
       <ul className="adm-list">
         {d.items.map((l) => (
@@ -815,7 +822,8 @@ function SmsTools() {
   };
   return (
     <>
-      <Note>Numbers that asked for the Verse of the Day by SMS. Only add people who agreed to it. <a href="/api/admin/sms_contacts.csv">Download the list (CSV)</a></Note>
+      <Note>Numbers from people who asked for the Verse of the Day by SMS or for a call from the church. Only add people who agreed to it. <a href="/api/admin/sms_contacts.csv">Download the list (CSV)</a></Note>
+      <PrivateLists />
       <div className="adm-card">
         <h2>Send today's verse to a number</h2>
         <p className="adm-muted">Type one or more numbers, separated by commas. This uses the church SMS account.</p>
@@ -826,6 +834,36 @@ function SmsTools() {
         {info && <Note kind={info.kind}>{info.text}</Note>}
       </div>
     </>
+  );
+}
+
+// The private copy of the lists: where it goes, and a button to send it now
+function PrivateLists() {
+  const [d, setD] = useState(null);
+  const [info, setInfo] = useState(null);
+  useEffect(() => { api('/admin/lists').then(setD).catch(() => {}); }, []);
+  const send = async () => {
+    try {
+      await api('/admin/lists/send', { method: 'POST', body: {} });
+      setInfo({ kind: 'ok', text: `Both lists were emailed to ${d.to}.` });
+    } catch (x) {
+      setInfo({ kind: 'error', text: x.message });
+    }
+  };
+  if (!d) return null;
+  return (
+    <div className="adm-card">
+      <h2>Private copy of the lists</h2>
+      <p className="adm-muted">
+        {d.counts.emails} confirmed email{d.counts.emails === 1 ? '' : 's'}{d.counts.pending ? `, ${d.counts.pending} not confirmed yet` : ''} · {d.counts.phones} phone number{d.counts.phones === 1 ? '' : 's'}{d.counts.call ? `, ${d.counts.call} asked for a call` : ''}.{' '}
+        {d.to ? <>New sign-ups are reported to <b>{d.to}</b>{d.weekly ? ', and both lists are emailed there every Monday' : ''}.{!d.private && ' This is the alerts address: set a private list address in Settings → Lists and sign-ups.'}</> : 'Set the private list address in Settings → Lists and sign-ups.'}
+      </p>
+      <div className="adm-row wrap">
+        <button className="adm-btn" onClick={send} disabled={!d.to}>Email both lists now</button>
+        <a className="adm-btn ghost" href="#settings">Change the address</a>
+      </div>
+      {info && <Note kind={info.kind}>{info.text}</Note>}
+    </div>
   );
 }
 

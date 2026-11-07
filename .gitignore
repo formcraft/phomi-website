@@ -6,3 +6,4 @@ api/vendor/
 api/config.php
 phomi-config.php
 uploads/
+.local/

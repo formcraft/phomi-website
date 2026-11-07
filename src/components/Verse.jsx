@@ -79,7 +79,7 @@ export function Subscribe({ id = 'subscribe', title = 'Get the daily verse' }) {
     const d = Object.fromEntries(new FormData(f));
     setState({ busy: true, done: '', err: '' });
     try {
-      const r = await api('/subscribe', { method: 'POST', body: { ...d, daily: !!d.daily, weekly: !!d.weekly, sms: !!d.sms } });
+      const r = await api('/subscribe', { method: 'POST', body: { ...d, daily: !!d.daily, weekly: !!d.weekly, sms: !!d.sms, call: !!d.call } });
       setState({ busy: false, done: r.message, err: '' });
       f.reset();
     } catch (x) {
@@ -89,16 +89,17 @@ export function Subscribe({ id = 'subscribe', title = 'Get the daily verse' }) {
   return (
     <form className="subscribe" id={id} onSubmit={submit}>
       <h3>{title}</h3>
-      <p>A verse each morning by email or SMS, and a Monday letter with the Verse of the Week, the latest sermon and coming events. Free, and you can stop any time.</p>
+      <p>A verse each morning by email or SMS, and a Monday letter with the Verse of the Week, the latest sermon and coming events. Or leave your number and someone from the church will call you. Free, and you can stop any time.</p>
       <div className="row">
         <label className="field">Your name<input name="name" id={`${id}-name`} autoComplete="name" /></label>
         <label className="field">Email address<input name="email" id={`${id}-email`} type="email" autoComplete="email" /></label>
-        <label className="field">Phone for SMS (optional)<input name="phone" id={`${id}-phone`} type="tel" inputMode="tel" autoComplete="tel" placeholder="0772 123456" /></label>
+        <label className="field">Phone number (optional)<input name="phone" id={`${id}-phone`} type="tel" inputMode="tel" autoComplete="tel" placeholder="0772 123456" /></label>
       </div>
       <div className="checks">
         <label><input type="checkbox" name="daily" id={`${id}-daily`} defaultChecked /> Verse of the Day by email</label>
         <label><input type="checkbox" name="weekly" id={`${id}-weekly`} defaultChecked /> Weekly letter</label>
         <label><input type="checkbox" name="sms" id={`${id}-sms`} /> Verse of the Day by SMS</label>
+        <label><input type="checkbox" name="call" id={`${id}-call`} /> Please call me</label>
       </div>
       <input name="website" tabIndex={-1} autoComplete="off" className="hp" aria-hidden="true" />
       <div className="btn-row">
@@ -109,6 +110,7 @@ export function Subscribe({ id = 'subscribe', title = 'Get the daily verse' }) {
       </div>
       {state.done && <p className="ok" role="status">{state.done}</p>}
       {state.err && <p className="err" role="alert">{state.err}</p>}
+      <p className="small">We only use your email or number for the messages you choose here, and never share them.</p>
     </form>
   );
 }

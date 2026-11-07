@@ -32,6 +32,12 @@ const SETTING_DEFAULTS = [
     'letters_mode' => 'auto', // 'auto' sends planned emails unless paused; 'approve' waits for an admin each time
     'letters_time' => '06:00',
     'sms_on' => '0', // '1' sends the daily verse by SMS (needs an SMS account in phomi-config.php)
+
+    // The private copy of the email and phone lists (never shown on the site)
+    'lists_email' => '', // e.g. the pastor's own Gmail; blank = the alerts address above
+    'lists_weekly' => '1', // '1' emails both lists there every Monday
+    'lists_sent_on' => '', // set by the system
+
     'momo_mtn_number' => '',
     'momo_mtn_name' => '',
     'momo_airtel_number' => '',

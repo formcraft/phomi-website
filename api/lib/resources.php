@@ -61,12 +61,13 @@ function resources(): array
             ],
         ],
         'sms_contacts' => [
-            'label' => 'SMS list',
+            'label' => 'Phone list',
             'order' => 'id DESC',
             'fields' => [
                 'phone' => ['type' => 'text', 'required' => true, 'max' => 30, 'label' => 'Phone number (e.g. 0772 123456)'],
                 'name' => ['type' => 'text', 'max' => 120, 'label' => 'Name'],
                 'daily' => ['type' => 'bool', 'default' => '1', 'label' => 'Verse of the Day by SMS'],
+                'call_me' => ['type' => 'bool', 'default' => '0', 'label' => 'Asked for a call from the church'],
                 'status' => ['type' => 'select', 'options' => ['active', 'stopped'], 'default' => 'active', 'label' => 'Status'],
             ],
         ],

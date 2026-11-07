@@ -13,6 +13,8 @@ It lives at **https://pottershouseoutreachministriesinternational.com** and is h
 - **Verse emails and SMS:** members sign up for a morning verse email, a Monday letter (Verse of the Week, latest sermon, coming events) and an optional SMS. Sent by the cron job; an admin can pause, approve or add a message to each one.
 - **Giving:** the giver types their MTN or Airtel number and gets the Mobile Money PIN prompt on their phone (Yo! Payments or Flutterwave). Until a payment account is live, the page falls back to the dial code.
 
+**Want to try it first?** Run the whole site on your own computer with `npm run local`: see [docs/LOCAL-PREVIEW.md](docs/LOCAL-PREVIEW.md).
+
 **Launching?** Start with [docs/INFORMATION-NEEDED.md](docs/INFORMATION-NEEDED.md), then follow [docs/SETUP.md](docs/SETUP.md).
 To have Claude Code finish the launch, use [docs/CLAUDE-CODE-PROMPT.md](docs/CLAUDE-CODE-PROMPT.md).
 
@@ -26,6 +28,8 @@ npm run dev                         # the website at http://localhost:5173 (buil
 npm run build                       # the finished site, backend included, in dist/
 npm run test:api                    # backend tests: SQLite, mock payments, fake mailbox
 npm run test:site                   # browser tests of the built site, desktop and phone (needs Playwright)
+npm run test:phone                  # every page on four phone sizes, offline, plus security checks
+npm run local                       # the whole site on your computer: http://localhost:8080 (add -- --lan for your phone)
 ```
 
 ## How the pieces fit
@@ -52,7 +56,8 @@ If the backend can't be reached, the site still works with the built-in content 
 | Service times, phone numbers, WhatsApp, Mobile Money and bank details | **Admin → Settings** (overrides `src/data.js`) |
 | Verse of the Day / Week for a date | **Admin → Daily verses** (otherwise the built-in list in `api/lib/bible.php`) |
 | Verse emails and SMS: on/off, send time, approval | **Admin → Settings → Bible, verse emails and SMS**; each letter in **Admin → Verse emails & SMS** |
-| Email list and SMS list | **Admin → Email list / SMS list** (CSV download on each) |
+| Email list and phone list | **Admin → Email list / Phone list** (CSV download on each) |
+| Private address that gets new sign-ups and the lists every Monday | **Admin → Settings → Lists and sign-ups** |
 | Approved senders and who gets alerts | **Admin → Approved senders / Settings** |
 | Built-in photos and videos | `public/img/`, `public/video/` + `src/data.js` → `PHOTOS`, `CLIPS` |
 | Page text | `src/pages/*.jsx` |

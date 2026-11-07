@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { useOverlay } from './Overlay.jsx';
-import { CHURCH, CLIPS, PHOTOS, TIMES, img } from '../data.js';
+import { CHURCH, CLIPS, PHOTOS, TIMES, img, srcSet } from '../data.js';
 import { linkSite, niceDate, useLive, videoEmbed } from '../live.jsx';
 
 // Marks content the church still needs to supply. Shows as a gold highlight.
@@ -13,14 +13,14 @@ export function Tbc({ children }) {
   );
 }
 
-export function Photo({ name, alt = '', className = 'photo', eager }) {
-  return <img className={className} src={img(name)} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" />;
+export function Photo({ name, alt = '', className = 'photo', eager, sizes = '(max-width: 640px) 100vw, 50vw' }) {
+  return <img className={className} src={img(name)} srcSet={srcSet(name)} sizes={srcSet(name) ? sizes : undefined} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" />;
 }
 
 export function Banner({ photo, eyebrow, title, crumb, children }) {
   return (
     <section className="banner band">
-      {photo && <Photo name={photo} eager />}
+      {photo && <Photo name={photo} eager sizes="100vw" />}
       <div className="in">
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
