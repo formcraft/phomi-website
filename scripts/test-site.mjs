@@ -155,7 +155,8 @@ try {
   await page.waitForSelector('img[alt="Kibuku outreach"]');
   check('public gallery shows the uploaded photo first', (await page.locator('.masonry img').first().getAttribute('alt')) === 'Kibuku outreach');
   await page.goto(`${BASE}/prayer`);
-  check('prayer day from settings shows on the site', await page.isVisible('text=Wednesday · 6:30pm'));
+  // Wait for the page's own code to load (it loads separately) before looking.
+  check('prayer day from settings shows on the site', await page.waitForSelector('text=Wednesday · 6:30pm', { timeout: 10000 }).then(() => true, () => false));
 
   // Prayer form saves to the server
   await page.fill('#pr-name', 'Ruth');
@@ -442,7 +443,8 @@ try {
   await p3.waitForSelector('text=Giving from a computer?');
   check('without the server, giving falls back to the dial code', !(await p3.isVisible('#give-phone')));
   await p3.goto(`${BASE}/gallery`);
-  check('without the server, the built-in gallery shows', (await p3.locator('.masonry img').count()) > 20);
+  const builtIn = await p3.waitForFunction(() => document.querySelectorAll('.masonry img').length > 20, null, { timeout: 10000 }).then(() => true, () => false);
+  check('without the server, the built-in gallery shows', builtIn, await p3.locator('.masonry img').count());
 
   check('no script errors', errors.length === 0, errors.join(' | '));
 } finally {
