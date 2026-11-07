@@ -49,16 +49,17 @@ export const FUNDS = [
   ['bible-study', 'Bible Study']
 ];
 
+// [path, English label, text key in src/text.js]
 export const NAV = [
-  ['/', 'Home'],
-  ['/about', 'About'],
-  ['/ministries', 'Ministries'],
-  ['/sermons', 'Sermons'],
-  ['/bible', 'Bible'],
-  ['/events', 'Events'],
-  ['/gallery', 'Gallery'],
-  ['/prayer', 'Prayer Requests'],
-  ['/contact', 'Contact']
+  ['/', 'Home', 'nav.home'],
+  ['/about', 'About', 'nav.about'],
+  ['/ministries', 'Ministries', 'nav.ministries'],
+  ['/sermons', 'Sermons', 'nav.sermons'],
+  ['/bible', 'Bible', 'nav.bible'],
+  ['/events', 'Events', 'nav.events'],
+  ['/gallery', 'Gallery', 'nav.gallery'],
+  ['/prayer', 'Prayer Requests', 'nav.prayer'],
+  ['/contact', 'Contact', 'nav.contact']
 ];
 
 export const VALUES = [

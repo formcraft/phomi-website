@@ -52,9 +52,10 @@ function sms_send(array $phones, string $message): int
 
 function sms_verse_text(array $v): string
 {
-    $t = "Verse of the Day: \"{$v['text']}\" {$v['ref']} - Potter's House";
+    $label = ($v['translation'] ?? '') === 'lug' ? 'Ekyawandiikibwa kya Leero' : 'Verse of the Day';
+    $t = "$label: \"{$v['text']}\" {$v['ref']} - Potter's House";
     if (mb_strlen($t) > 459) { // keep it to three SMS parts at most
-        $t = "Verse of the Day: \"" . mb_substr($v['text'], 0, 380) . "…\" {$v['ref']} - Potter's House";
+        $t = "$label: \"" . mb_substr($v['text'], 0, 380) . "…\" {$v['ref']} - Potter's House";
     }
     return $t;
 }
@@ -66,11 +67,14 @@ function sms_tick(): int
     $sent = 0;
     foreach (rows("SELECT * FROM letters WHERE kind = 'sms' AND status IN ('scheduled', 'sending') AND send_after <= ? ORDER BY for_date", [now()]) as $l) {
         q("UPDATE letters SET status = 'sending' WHERE id = ?", [$l['id']]);
-        $v = verse_for($l['for_date'], 'day');
-        $msg = sms_verse_text($v);
-        $batch = rows("SELECT id, phone FROM sms_contacts WHERE status = 'active' AND daily = 1 AND id > ? ORDER BY id LIMIT 500", [(int)$l['cursor_id']]);
+        // People who signed up in Luganda get the verse from the Luganda Bible
+        $msg = ['en' => sms_verse_text(verse_for($l['for_date'], 'day')), 'lg' => sms_verse_text(verse_for($l['for_date'], 'day', 'lug'))];
+        $batch = rows("SELECT id, phone, lang FROM sms_contacts WHERE status = 'active' AND daily = 1 AND id > ? ORDER BY id LIMIT 500", [(int)$l['cursor_id']]);
         if ($batch) {
-            $sent += sms_send(array_column($batch, 'phone'), $msg);
+            foreach (['en', 'lg'] as $lang) {
+                $phones = array_column(array_filter($batch, fn($c) => ($c['lang'] === 'lg' ? 'lg' : 'en') === $lang), 'phone');
+                if ($phones) $sent += sms_send($phones, $msg[$lang]);
+            }
             q('UPDATE letters SET cursor_id = ?, sent_count = sent_count + ? WHERE id = ?', [end($batch)['id'], count($batch), $l['id']]);
         }
         if (count($batch) < 500) q("UPDATE letters SET status = 'sent', sent_at = ? WHERE id = ?", [now(), $l['id']]);

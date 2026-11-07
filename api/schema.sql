@@ -216,6 +216,7 @@ CREATE TABLE IF NOT EXISTS subscribers (
   weekly TINYINT NOT NULL DEFAULT 1,
   status VARCHAR(12) NOT NULL DEFAULT 'pending',
   token VARCHAR(64) NOT NULL DEFAULT '',
+  lang VARCHAR(5) NOT NULL DEFAULT 'en',
   source VARCHAR(12) NOT NULL DEFAULT 'website',
   created_at DATETIME NOT NULL,
   confirmed_at DATETIME NULL,
@@ -238,13 +239,25 @@ CREATE TABLE IF NOT EXISTS letters (
   UNIQUE KEY letters_one (kind, for_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Phone numbers that asked for the Verse of the Day by SMS
+-- The church's own wording and styles for any text on the site (Admin → Site text). Missing keys use the built-in text.
+CREATE TABLE IF NOT EXISTS site_text (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  k VARCHAR(120) NOT NULL,
+  en TEXT NULL,
+  lg TEXT NULL,
+  style VARCHAR(400) NOT NULL DEFAULT '',
+  updated_at DATETIME NULL,
+  UNIQUE KEY site_text_k (k)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Phone numbers that asked for the Verse of the Day by SMS, or for a call from the church
 CREATE TABLE IF NOT EXISTS sms_contacts (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   phone VARCHAR(20) NOT NULL,
   name VARCHAR(120) NOT NULL DEFAULT '',
   daily TINYINT NOT NULL DEFAULT 1,
   call_me TINYINT NOT NULL DEFAULT 0,
+  lang VARCHAR(5) NOT NULL DEFAULT 'en',
   status VARCHAR(12) NOT NULL DEFAULT 'active',
   source VARCHAR(12) NOT NULL DEFAULT 'website',
   created_at DATETIME NOT NULL,

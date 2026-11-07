@@ -25,6 +25,8 @@ const SETTING_DEFAULTS = [
     'tiktok' => '',
     'instagram' => '',
     'whatsapp_channel' => '',
+    'site_theme' => '', // fonts, colours and text size for the whole site (Admin → Site text)
+    'default_lang' => 'en', // 'en' or 'lg': the language a first-time visitor sees
 
     // Bible and verse emails
     'bible_default' => 'kjv', // 'kjv' or 'web'
@@ -50,7 +52,7 @@ const SETTING_DEFAULTS = [
 // Settings that are safe to show to every visitor
 const PUBLIC_SETTINGS = [
     'times_sunday', 'times_prayer_day', 'times_prayer_time', 'times_bible_day', 'times_bible_time',
-    'whatsapp', 'phones', 'email', 'facebook', 'youtube', 'tiktok', 'instagram', 'whatsapp_channel', 'bible_default', 'momo_mtn_number', 'momo_mtn_name', 'momo_airtel_number', 'momo_airtel_name',
+    'whatsapp', 'phones', 'email', 'facebook', 'youtube', 'tiktok', 'instagram', 'whatsapp_channel', 'bible_default', 'site_theme', 'default_lang', 'momo_mtn_number', 'momo_mtn_name', 'momo_airtel_number', 'momo_airtel_name',
     'bank_name', 'bank_account', 'bank_swift',
 ];
 
@@ -104,6 +106,8 @@ function settings_save(array $values, string $summary = ''): void
     $after = [];
     foreach ($values as $k => $v) {
         if (!array_key_exists($k, SETTING_DEFAULTS)) continue;
+        if ($k === 'site_theme') $v = site_theme_clean($v);
+        if ($k === 'default_lang') $v = $v === 'lg' ? 'lg' : 'en';
         $old = setting_raw($k);
         setting_set($k, (string)$v);
         if (in_array($k, SECRET_SETTINGS, true)) continue;

@@ -409,3 +409,19 @@ footer .base .in{max-width:1160px;margin:0 auto;padding:20px var(--gr) 20px var(
 .sendto-row .btn{min-height:44px;padding:0 20px}
 .sendto .btn.off{opacity:.45;pointer-events:none}
 .sendto .small{margin:0;font-size:12px;opacity:.8}
+
+/* English / Luganda switch: in the navigation bar on computers and tablets, beside the menu button on phones */
+.langbtn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border:1.5px solid var(--clay);border-radius:999px;background:var(--white);color:var(--clay);font:600 13px/1 var(--body);letter-spacing:.03em;cursor:pointer;white-space:nowrap}
+.langbtn:hover{background:var(--clay);color:var(--white)}
+.langbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.langbtn-nav{margin-left:10px}
+.langbtn-phone{display:none;margin-left:auto}
+@media (max-width:900px){.langbtn-phone{display:inline-flex;min-height:44px}}
+@media (max-width:360px){.langbtn-phone{padding:0 10px;font-size:12px}.langbtn-phone svg{display:none}.hdr-top{gap:8px}}
+.chapter .credit{margin:18px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
+/* Luganda menu words are longer: keep the menu bar on one line on computers */
+.langbtn-nav{min-height:34px;padding:0 12px;margin-left:6px}
+.give-pill{margin-left:8px}
+@media (max-width:1240px){nav.main a.nl{padding:0 9px;font-size:13.5px}}
+@media (max-width:1060px){nav.main a.nl{padding:0 6px;font-size:13px}.langbtn-nav svg{display:none}.langbtn-nav{padding:0 10px}.give-pill{padding:0 14px}}
+@media (max-width:990px){nav.main a.nl{padding:0 5px;font-size:12.5px}.give-pill{margin-left:4px;padding:0 12px;font-size:12px}.langbtn-nav{margin-left:2px;padding:0 8px;font-size:12px}}

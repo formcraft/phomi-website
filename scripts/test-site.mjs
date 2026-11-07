@@ -30,6 +30,16 @@ const fails = [];
 const check = (name, ok, info = '') => { console.log((ok ? 'PASS ' : 'FAIL ') + name + (ok ? '' : `  -> ${info}`)); if (!ok) fails.push(name); };
 const shot = async (page, name) => { if (SHOTS) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: join(SHOTS, name + '.png'), fullPage: false }); } };
 
+// Every piece of site text has Luganda, with the same {blanks} as the English
+{
+  const { TEXT } = await import('../src/text.js');
+  const noLg = Object.keys(TEXT).filter((k) => !String(TEXT[k][1] || '').trim());
+  const blanks = (x) => (String(x).match(/\{\w+\}/g) || []).sort().join();
+  const badBlanks = Object.keys(TEXT).filter((k) => TEXT[k][1] && blanks(TEXT[k][0]) !== blanks(TEXT[k][1]));
+  check(`all ${Object.keys(TEXT).length} pieces of site text have Luganda`, !noLg.length, noLg.slice(0, 10));
+  check('Luganda text keeps the same {blanks} as English', !badBlanks.length, badBlanks.slice(0, 10));
+}
+
 const browser = await chromium.launch();
 try {
   // One-time setup through the real installer page
@@ -181,6 +191,72 @@ try {
   await page.click('nav >> text=Email list');
   await page.waitForSelector('text=ruth@phomi.test');
   check('new sign-up waits in the admin email list', true);
+
+  // Admin → Site text: new wording in both languages with a colour, then back to the built-in text
+  await page.click('nav >> text=Site text');
+  await page.waitForSelector('h1:has-text("Site text")');
+  await page.fill('input[type=search]', 'Shaped by');
+  const row = page.locator('#st-home\\.heroTitle');
+  await row.waitFor();
+  await row.locator('textarea').nth(0).fill('Made new in the Potter\'s hand');
+  await row.locator('textarea').nth(1).fill('Tufuulibwa abaggya mu mukono gw’Omubumbi');
+  await row.locator('input[type=color]').fill('#1f6f3a');
+  await row.locator('button:has-text("Save")').click();
+  await row.locator('text=Saved.').waitFor();
+  check('admin Site text saves English and Luganda wording', true);
+  await shot(page, 'admin-site-text');
+  await page.click('nav >> text=Social links');
+  await page.fill('label:has-text("Instagram") input', 'https://www.instagram.com/phomi.test');
+  await page.click('.adm-head button:has-text("Save")');
+  await page.waitForSelector('text=Saved.');
+  check('admin Social links saved', true);
+
+  await page.goto(`${BASE}/`);
+  await page.waitForSelector('h1:has-text("Made new in the Potter")');
+  const colour = await page.evaluate(() => getComputedStyle(document.querySelector('[data-k="home.heroTitle"]')).color);
+  check('home page shows the new wording in its colour', colour === 'rgb(31, 111, 58)', colour);
+  const insta = page.locator('footer a[aria-label=Instagram]');
+  check('new social link opens in a new tab', (await insta.getAttribute('href')) === 'https://www.instagram.com/phomi.test' && (await insta.getAttribute('target')) === '_blank');
+  const offsite = await page.evaluate(() => [...document.querySelectorAll('a[href^="http"]')].filter((a) => new URL(a.href).host !== location.host && a.target !== '_blank').map((a) => a.href));
+  check('every link to another website opens in a new tab', !offsite.length, offsite);
+
+  // The language button: the whole site and the Bible in Luganda, remembered on the next visit
+  await page.click('nav.main .langbtn');
+  await page.waitForSelector('h1:has-text("Tufuulibwa abaggya")');
+  check('language button switches the site to Luganda', (await page.getAttribute('html', 'lang')) === 'lg' && await page.isVisible('nav.main >> text=Bayibuli'));
+  for (const w of [960, 1280]) {
+    await page.setViewportSize({ width: w, height: 800 });
+    const navH = await page.evaluate(() => document.querySelector('nav.main .in').getBoundingClientRect().height);
+    check(`menu bar stays on one line in Luganda at ${w}px`, navH < 60, navH);
+  }
+  await page.goto(`${BASE}/bible`);
+  await page.waitForSelector('.chapter h2');
+  check('language choice is remembered on the next page', (await page.getAttribute('html', 'lang')) === 'lg');
+  check('Luganda readers get the Luganda Bible', /Bayibuli Entukuvu/.test(await page.textContent('.chapter header')), await page.textContent('.chapter header'));
+  check('Luganda chapters show the Biblica credit', /Biblica/.test(await page.textContent('.chapter .credit')));
+  await page.fill('#bible-q', 'Yokaana 3:16');
+  await page.press('#bible-q', 'Enter');
+  await page.waitForSelector('.chapter h2:has-text("Yokaana 3")');
+  check('a Luganda reference (Yokaana 3:16) opens the verse', await page.isVisible('#v16.on'));
+  await shot(page, 'site-bible-luganda');
+  await page.fill('#bible-subscribe-name', 'Nakato');
+  await page.fill('#bible-subscribe-email', 'nakato@phomi.test');
+  await page.click('#bible-subscribe button:has-text("Wewandiise")');
+  await page.waitForSelector('#bible-subscribe .ok');
+  check('Luganda sign-up is answered in Luganda', /Kumpi kuggwa/.test(await page.textContent('#bible-subscribe .ok')));
+  await page.click('nav.main .langbtn');
+  await page.waitForFunction(() => document.documentElement.lang === 'en');
+  check('language button switches back to English', await page.isVisible('nav.main >> text=Bible'));
+  await page.goto(`${BASE}/?lang=lg`);
+  await page.waitForFunction(() => document.documentElement.lang === 'lg');
+  check('a ?lang=lg link opens the site in Luganda', true);
+  await page.goto(`${BASE}/?lang=en`);
+  await page.waitForFunction(() => document.documentElement.lang === 'en');
+  await page.goto(`${BASE}/admin#text`);
+  await page.fill('input[type=search]', 'Shaped by');
+  await page.locator('#st-home\\.heroTitle button:has-text("Use the built-in wording")').click();
+  await page.waitForSelector('text=Back to the built-in wording.');
+  check('admin can put back the built-in wording', true);
 
   // Phone: giving with the PIN prompt
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });

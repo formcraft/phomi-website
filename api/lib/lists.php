@@ -21,14 +21,14 @@ function lists_csv(string $kind): string
 {
     $f = fopen('php://temp', 'w+');
     if ($kind === 'phones') {
-        fputcsv($f, ['phone', 'name', 'verse by SMS', 'please call', 'status', 'added']);
-        foreach (rows('SELECT phone, name, daily, call_me, status, created_at FROM sms_contacts ORDER BY id') as $r) {
-            fputcsv($f, array_map('csv_cell', [$r['phone'], $r['name'], $r['daily'] ? 'yes' : 'no', $r['call_me'] ? 'yes' : 'no', $r['status'], $r['created_at']]));
+        fputcsv($f, ['phone', 'name', 'verse by SMS', 'please call', 'language', 'status', 'added']);
+        foreach (rows('SELECT phone, name, daily, call_me, lang, status, created_at FROM sms_contacts ORDER BY id') as $r) {
+            fputcsv($f, array_map('csv_cell', [$r['phone'], $r['name'], $r['daily'] ? 'yes' : 'no', $r['call_me'] ? 'yes' : 'no', $r['lang'] === 'lg' ? 'Luganda' : 'English', $r['status'], $r['created_at']]));
         }
     } else {
-        fputcsv($f, ['email', 'name', 'daily verse', 'weekly letter', 'status', 'signed up', 'confirmed']);
-        foreach (rows('SELECT email, name, daily, weekly, status, created_at, confirmed_at FROM subscribers ORDER BY id') as $r) {
-            fputcsv($f, array_map('csv_cell', [$r['email'], $r['name'], $r['daily'] ? 'yes' : 'no', $r['weekly'] ? 'yes' : 'no', $r['status'], $r['created_at'], $r['confirmed_at'] ?? '']));
+        fputcsv($f, ['email', 'name', 'daily verse', 'weekly letter', 'language', 'status', 'signed up', 'confirmed']);
+        foreach (rows('SELECT email, name, daily, weekly, lang, status, created_at, confirmed_at FROM subscribers ORDER BY id') as $r) {
+            fputcsv($f, array_map('csv_cell', [$r['email'], $r['name'], $r['daily'] ? 'yes' : 'no', $r['weekly'] ? 'yes' : 'no', $r['lang'] === 'lg' ? 'Luganda' : 'English', $r['status'], $r['created_at'], $r['confirmed_at'] ?? '']));
         }
     }
     rewind($f);

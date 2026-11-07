@@ -3,11 +3,13 @@ import Icon from './Icon.jsx';
 import { useOverlay } from './Overlay.jsx';
 import { CHURCH, CLIPS, PHOTOS, TIMES, img, srcSet } from '../data.js';
 import { linkSite, niceDate, useLive, videoEmbed } from '../live.jsx';
+import { T, useT } from '../i18n.jsx';
 
 // Marks content the church still needs to supply. Shows as a gold highlight.
 export function Tbc({ children }) {
+  const t = useT();
   return (
-    <span className="tbc" title="To confirm with the church">
+    <span className="tbc" title={t('common.tbc')}>
       {children}
     </span>
   );
@@ -26,7 +28,7 @@ export function Banner({ photo, eyebrow, title, crumb, children }) {
         <h1>{title}</h1>
         {crumb && (
           <p className="crumb">
-            <Link to="/">Home</Link> / {crumb}
+            <Link to="/"><T k="nav.home" /></Link> / {crumb}
           </p>
         )}
         {children}
@@ -60,27 +62,29 @@ export function SectionHead({ title, gold, lead, children }) {
 
 export function PrayerWhen() {
   useLive();
-  return TIMES.prayerDay ? <>{TIMES.prayerDay}</> : <Tbc>Day to confirm</Tbc>;
+  const t = useT();
+  return TIMES.prayerDay ? <>{t.days(TIMES.prayerDay)}</> : <Tbc><T k="common.dayTbc" /></Tbc>;
 }
 
 export function GatherCards() {
   useLive();
+  const t = useT();
   return (
     <div className="gather">
       <div className="gcard">
         <div className="ic"><Icon name="church" /></div>
         <div>
-          <h3>Sunday Service</h3>
-          <p className="when">{TIMES.sunday}</p>
-          <p>Praise, worship and the preaching of the Word, at PHOMI, Burweta, Butebo District.</p>
+          <h3><T k="common.sundayService" /></h3>
+          <p className="when">{t.days(TIMES.sunday)}</p>
+          <p><T k="common.sundayDesc" /></p>
         </div>
       </div>
       <div className="gcard">
         <div className="ic"><Icon name="clock" /></div>
         <div>
-          <h3>Prayer Time</h3>
+          <h3><T k="common.prayerTime" /></h3>
           <p className="when"><PrayerWhen /> · {TIMES.prayerTime}</p>
-          <p>An evening of intercession for our families, our community and the nations.</p>
+          <p><T k="common.prayerDesc" /></p>
         </div>
       </div>
     </div>
@@ -88,15 +92,16 @@ export function GatherCards() {
 }
 
 export function MapCard() {
+  const t = useT();
   return (
     <div className="mapcard">
-      <Photo name="church-dusk" alt="The church at dusk" />
+      <Photo name="church-dusk" alt={t('common.churchDusk')} />
       <div className="in">
-        <strong style={{ fontFamily: 'var(--head)', fontSize: 22 }}>PHOMI, Burweta</strong>
-        <span style={{ color: 'var(--onDark)', fontSize: 14 }}>Butebo District, Eastern Uganda · P.O. Box 1972, Mbale</span>
+        <strong style={{ fontFamily: 'var(--head)', fontSize: 22 }}><T k="common.mapName" /></strong>
+        <span style={{ color: 'var(--onDark)', fontSize: 14 }}><T k="common.mapArea" /></span>
         <div>
           <a className="btn btn-gold" style={{ minHeight: 42 }} href={CHURCH.mapsUrl} target="_blank" rel="noopener noreferrer">
-            <Icon name="pin" size={16} /> Open in Google Maps
+            <Icon name="pin" size={16} /> <T k="common.openMaps" />
           </a>
         </div>
       </div>
@@ -108,6 +113,7 @@ export function MapCard() {
 // come first, then the built-in clips.
 export function useClips() {
   const { videos = [] } = useLive();
+  const t = useT();
   const live = videos.map((v) => {
     const e = videoEmbed(v.link);
     const cap = `${v.title} · ${v.category}`;
@@ -126,10 +132,14 @@ export function useClips() {
       item,
     };
   });
-  const built = CLIPS.map((c) => ({
-    key: c.v, title: c.t, kind: c.k, desc: c.p, dur: c.d, thumb: img('v-' + c.v),
-    item: { type: 'video', name: c.v, cap: `${c.t} · ${c.k}` },
-  }));
+  const built = CLIPS.map((c) => {
+    const title = t(`clip.${c.v}.t`);
+    const kind = t(`gallery.cat.${c.k}`);
+    return {
+      key: c.v, title, kind, desc: t(`clip.${c.v}.p`), dur: c.d, thumb: img('v-' + c.v),
+      item: { type: 'video', name: c.v, cap: `${title} · ${kind}` },
+    };
+  });
   return [...live, ...built];
 }
 
@@ -152,10 +162,17 @@ export function ClipCard({ clip, list }) {
   );
 }
 
+// The built-in photos with captions in the visitor's language: [name, caption, category]
+export function usePhotos() {
+  const t = useT();
+  return PHOTOS.map(([n, , c]) => [n, t(`photo.${n}`), c]);
+}
+
 // Opens a photo in the lightbox, stepping through the given list (defaults to every photo).
 export function usePhotoViewer() {
   const { open } = useOverlay();
-  return (name, list = PHOTOS) => {
+  const photos = usePhotos();
+  return (name, list = photos) => {
     const items = list.map(([n, cap]) => ({ type: 'img', name: n, cap }));
     open(items, Math.max(0, items.findIndex((x) => x.name === name)));
   };
@@ -165,7 +182,7 @@ export function CopyButton({ text, label, children }) {
   const { copy } = useOverlay();
   return (
     <button className="copy" type="button" onClick={() => copy(text, label)}>
-      {children || 'Copy'}
+      {children || <T k="common.copy" />}
     </button>
   );
 }

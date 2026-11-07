@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Banner, ClipCard, Tbc, useClips } from '../components/ui.jsx';
 import { CHURCH, img, video } from '../data.js';
 import { linkSite, niceDate, useLive, videoEmbed } from '../live.jsx';
+import { T, useT } from '../i18n.jsx';
 
 function Media({ s }) {
   const em = videoEmbed(s.media_url);
@@ -25,9 +26,9 @@ function Byline({ s }) {
 function Listen({ s }) {
   return (
     <>
-      {s.audio && <audio controls preload="none" src={s.audio} style={{ width: '100%' }}>Your browser cannot play this audio.</audio>}
+      {s.audio && <audio controls preload="none" src={s.audio} style={{ width: '100%' }}><T k="sermons.noAudio" /></audio>}
       {s.media_url && !videoEmbed(s.media_url) && (
-        <div className="btn-row"><a className="btn btn-navy" href={s.media_url} target="_blank" rel="noopener noreferrer">Watch on {linkSite(s.media_url)}</a></div>
+        <div className="btn-row"><a className="btn btn-navy" href={s.media_url} target="_blank" rel="noopener noreferrer"><T k="common.watchOn" vars={{ site: linkSite(s.media_url) }} /></a></div>
       )}
     </>
   );
@@ -43,9 +44,9 @@ function SermonCard({ s }) {
         <h3>{s.title}</h3>
         <Byline s={s} />
         {s.summary && <p className="sum">{open || !long ? s.summary : s.summary.slice(0, 220).trim() + '…'}</p>}
-        {long && <button type="button" className="linkbtn" onClick={() => setOpen(!open)}>{open ? 'Show less' : 'Read more'}</button>}
+        {long && <button type="button" className="linkbtn" onClick={() => setOpen(!open)}><T k={open ? 'sermons.showLess' : 'sermons.readMore'} /></button>}
         {(s.video || videoEmbed(s.media_url)) && open && <div className={'player ' + (videoEmbed(s.media_url)?.shape === 'tall' && !s.video ? 'tall' : 'wide')}><Media s={s} /></div>}
-        {(s.video || videoEmbed(s.media_url)) && !open && <button type="button" className="linkbtn" onClick={() => setOpen(true)}>Watch</button>}
+        {(s.video || videoEmbed(s.media_url)) && !open && <button type="button" className="linkbtn" onClick={() => setOpen(true)}><T k="sermons.watch" /></button>}
         <Listen s={s} />
       </div>
     </article>
@@ -54,6 +55,7 @@ function SermonCard({ s }) {
 
 export default function Sermons() {
   const { sermons } = useLive();
+  const t = useT();
   const [q, setQ] = useState('');
   const term = q.trim().toLowerCase();
   const latest = sermons[0];
@@ -63,7 +65,7 @@ export default function Sermons() {
   const portrait = !latest || latest.video || videoEmbed(latest.media_url)?.shape === 'tall';
   return (
     <>
-      <Banner photo="outdoor-service" eyebrow="The Word preached" title="Sermons" crumb="Sermons" />
+      <Banner photo="outdoor-service" eyebrow={<T k="sermons.eyebrow" />} title={<T k="sermons.title" />} crumb={<T k="sermons.crumb" />} />
       <section className="sec band">
         <div className="wrap feature">
           <div className={portrait ? 'player' : 'player wide'}>
@@ -74,7 +76,7 @@ export default function Sermons() {
             )}
           </div>
           <div className="txt">
-            <p className="eyebrow" style={{ color: 'var(--accentText)' }}>Latest message</p>
+            <p className="eyebrow" style={{ color: 'var(--accentText)' }}><T k="sermons.latest" /></p>
             {latest ? (
               <>
                 <h2 className="h2">{latest.title}</h2>
@@ -84,15 +86,15 @@ export default function Sermons() {
               </>
             ) : (
               <>
-                <h2 className="h2"><Tbc>Sermon title</Tbc></h2>
-                <p style={{ margin: 0, color: 'var(--muted)' }}><Tbc>Speaker</Tbc> · <Tbc>Date</Tbc> · <Tbc>Scripture</Tbc></p>
-                <p className="lead">A moment from Sunday service in the hall at Burweta. Full messages are shared live on our Facebook page.</p>
+                <h2 className="h2"><Tbc><T k="sermons.titleTbc" /></Tbc></h2>
+                <p style={{ margin: 0, color: 'var(--muted)' }}><Tbc><T k="sermons.speakerTbc" /></Tbc> · <Tbc><T k="sermons.dateTbc" /></Tbc> · <Tbc><T k="sermons.scriptureTbc" /></Tbc></p>
+                <p className="lead"><T k="sermons.placeholder" /></p>
               </>
             )}
             <div className="btn-row">
-              <a className="btn btn-light" href={CHURCH.facebook} target="_blank" rel="noopener noreferrer">Watch live on Facebook</a>
-              {CHURCH.youtube && <a className="btn btn-light" href={CHURCH.youtube} target="_blank" rel="noopener noreferrer">Our YouTube channel</a>}
-              {CHURCH.tiktok && <a className="btn btn-light" href={CHURCH.tiktok} target="_blank" rel="noopener noreferrer">Follow on TikTok</a>}
+              <a className="btn btn-light" href={CHURCH.facebook} target="_blank" rel="noopener noreferrer"><T k="sermons.facebook" /></a>
+              {CHURCH.youtube && <a className="btn btn-light" href={CHURCH.youtube} target="_blank" rel="noopener noreferrer"><T k="sermons.youtube" /></a>}
+              {CHURCH.tiktok && <a className="btn btn-light" href={CHURCH.tiktok} target="_blank" rel="noopener noreferrer"><T k="sermons.tiktok" /></a>}
             </div>
           </div>
         </div>
@@ -101,31 +103,31 @@ export default function Sermons() {
         <div className="wrap">
           <div className="searchrow">
             <div className="stack" style={{ gap: 14 }}>
-              <h2 className="h2">{sermons.length > 1 ? 'Past Sermons' : 'Recent Moments'}</h2>
+              <h2 className="h2"><T k={sermons.length > 1 ? 'sermons.past' : 'sermons.recent'} /></h2>
               <div className="rule" />
             </div>
             <label className="field">
-              Search
-              <input type="search" id="clip-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Faith, healing, a preacher…" />
+              <T k="sermons.search" />
+              <input type="search" id="clip-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('sermons.searchHint')} />
             </label>
           </div>
           {sermons.length > 1 && (
             <div className="sermons">
-              {found.length ? found.map((s) => <SermonCard key={s.id} s={s} />) : <div className="empty">No sermons match “{q}”.</div>}
+              {found.length ? found.map((s) => <SermonCard key={s.id} s={s} />) : <div className="empty"><T k="sermons.noSermons" vars={{ q }} /></div>}
             </div>
           )}
-          {sermons.length > 1 && <h3 className="h3" style={{ margin: '48px 0 20px' }}>Recent Moments</h3>}
+          {sermons.length > 1 && <h3 className="h3" style={{ margin: '48px 0 20px' }}><T k="sermons.recent" /></h3>}
           <div className="clips">
             {list.length ? list.map((c) => <ClipCard key={c.key} clip={c} list={list} />) : (
-              <div className="empty" style={{ gridColumn: '1/-1' }}>No videos match “{q}”. Try worship, outreach or children.</div>
+              <div className="empty" style={{ gridColumn: '1/-1' }}><T k="sermons.noVideos" vars={{ q }} /></div>
             )}
           </div>
         </div>
       </section>
       <section className="cta-band band">
         <div className="wrap">
-          <h2>Hear the Word in person, Sundays at 8:30am</h2>
-          <Link className="btn btn-navy" to="/contact">Plan your visit</Link>
+          <h2><T k="sermons.ctaTitle" /></h2>
+          <Link className="btn btn-navy" to="/contact"><T k="common.planVisit" /></Link>
         </div>
       </section>
     </>

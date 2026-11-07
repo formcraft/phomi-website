@@ -80,4 +80,11 @@ function install_schema(): void
     foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
         db()->exec($stmt);
     }
+    // Columns added after the first release: a database made by an older version gets them here
+    foreach ([['sms_contacts', 'call_me', 'TINYINT NOT NULL DEFAULT 0'], ['subscribers', 'lang', "VARCHAR(5) NOT NULL DEFAULT 'en'"], ['sms_contacts', 'lang', "VARCHAR(5) NOT NULL DEFAULT 'en'"]] as [$t, $c, $def]) {
+        $has = is_sqlite()
+            ? in_array($c, array_column(rows("PRAGMA table_info($t)"), 'name'), true)
+            : (bool)rows("SHOW COLUMNS FROM `$t` LIKE '$c'");
+        if (!$has) db()->exec("ALTER TABLE $t ADD COLUMN $c $def");
+    }
 }

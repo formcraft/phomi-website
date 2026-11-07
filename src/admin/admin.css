@@ -110,3 +110,17 @@
 .adm-badge.scheduled,.adm-badge.active,.adm-badge.sent{background:#EEF4EA;color:#2C4A20}
 .adm-badge.paused,.adm-badge.skipped,.adm-badge.unsubscribed,.adm-badge.stopped{background:#EEE;color:#555}
 .adm-badge.waiting,.adm-badge.sending{background:#FBF0D9;color:#7A5612}
+
+/* Site text */
+.adm-stack{display:flex;flex-direction:column;gap:18px}
+.st-list{display:flex;flex-direction:column;gap:0}
+.st-row{display:flex;flex-direction:column;gap:12px;padding:18px 0;border-top:1px solid var(--line)}
+.st-key{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.st-key code{font-size:12px;color:#5E6478;word-break:break-all}
+.st-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:12px;align-items:end}
+.st-colour{display:flex;align-items:center;gap:8px;min-height:44px}
+.st-colour input[type=color]{width:52px;height:44px;padding:2px;border:1px solid #CDBC9E;border-radius:8px;background:var(--white);cursor:pointer}
+.st-chk{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:600}
+.st-chk input{width:20px;height:20px}
+.st-preview{margin:0;padding:12px 14px;border:1px dashed #CDBC9E;border-radius:8px;background:#FFFCF6}
+.adm-actions{display:flex;flex-wrap:wrap;gap:8px}

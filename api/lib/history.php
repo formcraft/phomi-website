@@ -4,7 +4,7 @@ declare(strict_types=1);
 // Change history: every change to content and settings is recorded with what it was before,
 // so an admin can see who changed what and undo it.
 
-const HISTORY_TABLES = ['sermons', 'videos', 'verses', 'subscribers', 'sms_contacts', 'letters', 'photos', 'events', 'announcements', 'testimonies', 'senders', 'settings'];
+const HISTORY_TABLES = ['sermons', 'videos', 'verses', 'subscribers', 'sms_contacts', 'letters', 'photos', 'events', 'announcements', 'testimonies', 'senders', 'site_text', 'settings'];
 
 // Who is making changes in this request: an admin's email, "email: sender@…" or "approval link".
 function actor(?string $set = null): string
@@ -30,8 +30,8 @@ function log_change(string $action, string $table, ?int $id, ?array $before, ?ar
 
 function row_label(string $table, array $r): string
 {
-    $name = ['sermons' => 'sermon', 'videos' => 'video', 'verses' => 'planned verse', 'subscribers' => 'email subscriber', 'sms_contacts' => 'SMS contact', 'letters' => 'verse email', 'photos' => 'photo', 'events' => 'event', 'announcements' => 'announcement', 'testimonies' => 'testimony', 'senders' => 'approved sender'][$table] ?? $table;
-    $title = $r['title'] ?? $r['caption'] ?? $r['email'] ?? $r['phone'] ?? (isset($r['reference']) ? $r['reference'] . ' on ' . $r['show_on'] : '');
+    $name = ['sermons' => 'sermon', 'videos' => 'video', 'verses' => 'planned verse', 'subscribers' => 'email subscriber', 'sms_contacts' => 'SMS contact', 'letters' => 'verse email', 'photos' => 'photo', 'events' => 'event', 'announcements' => 'announcement', 'testimonies' => 'testimony', 'senders' => 'approved sender', 'site_text' => 'site text'][$table] ?? $table;
+    $title = $r['title'] ?? $r['caption'] ?? $r['email'] ?? $r['phone'] ?? $r['k'] ?? (isset($r['reference']) ? $r['reference'] . ' on ' . $r['show_on'] : '');
     return $title !== '' ? "$name \"" . mb_substr((string)$title, 0, 80) . '"' : $name;
 }
 

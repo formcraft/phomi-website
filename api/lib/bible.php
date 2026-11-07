@@ -4,7 +4,27 @@ declare(strict_types=1);
 // The whole Bible (KJV and the World English Bible, both public domain), stored in our own database,
 // plus the Verse of the Day / Verse of the Week plan. Plain scripts only: nothing here calls an outside service.
 
-const BIBLE_TRANSLATIONS = ['kjv' => 'King James Version', 'web' => 'World English Bible'];
+const BIBLE_TRANSLATIONS = ['kjv' => 'King James Version', 'web' => 'World English Bible', 'lug' => 'Bayibuli Entukuvu (Luganda)'];
+
+// The Luganda Bible: Biblica® Open Luganda Contemporary Bible, CC BY-SA 4.0 (see api/data/README.md)
+const BIBLE_CREDITS = [
+    'lug' => 'Bayibuli Entukuvu (Luganda Contemporary Bible) © 1984, 1986, 1993, 2014 Biblica, Inc. Used under CC BY-SA 4.0. Free at open.bible.',
+];
+
+// Luganda book names, in the same order as BIBLE_BOOKS (used for Luganda references and for search)
+const BIBLE_BOOKS_LG = [1 => 'Olubereberye', 'Okuva', 'Eby’Abaleevi', 'Okubala', 'Ekyamateeka', 'Yoswa', 'Ekyabalamuzi', 'Luusi',
+    '1 Samwiri', '2 Samwiri', '1 Bassekabaka', '2 Bassekabaka', '1 Ebyomumirembe', '2 Ebyomumirembe', 'Ezera', 'Nekkemiya', 'Eseza',
+    'Yobu', 'Zabbuli', 'Engero', 'Omubuulizi', 'Oluyimba', 'Isaaya', 'Yeremiya', 'Okukungubaga', 'Ezeekyeri', 'Danyeri', 'Koseya',
+    'Yoweeri', 'Amosi', 'Obadiya', 'Yona', 'Mikka', 'Nakkumu', 'Kaabakuuku', 'Zeffaniya', 'Kaggayi', 'Zekkaliya', 'Malaki',
+    'Matayo', 'Makko', 'Lukka', 'Yokaana', 'Ebikolwa by’Abatume', 'Abaruumi', '1 Abakkolinso', '2 Abakkolinso', 'Abaggalatiya',
+    'Abaefeso', 'Abafiripi', 'Abakkolosaayi', '1 Abassessaloniika', '2 Abassessaloniika', '1 Timoseewo', '2 Timoseewo', 'Tito',
+    'Firemooni', 'Abaebbulaniya', 'Yakobo', '1 Peetero', '2 Peetero', '1 Yokaana', '2 Yokaana', '3 Yokaana', 'Yuda', 'Okubikkulirwa'];
+
+// Verse of the Day themes in Luganda
+const VERSE_THEMES_LG = ['Faith' => 'Okukkiriza', 'Hope' => 'Essuubi', 'Love' => 'Okwagala', 'Prayer' => 'Okusaba', 'Strength' => 'Amaanyi',
+    'Peace' => 'Emirembe', 'Trust' => 'Okwesiga Katonda', 'Provision' => 'Katonda agaba', 'Healing' => 'Okuwonyezebwa', 'Family' => 'Amaka',
+    'Salvation' => 'Obulokozi', 'Praise' => 'Okutendereza', 'Guidance' => 'Okulungamizibwa', 'Service' => 'Okuweereza',
+    'Grace and forgiveness' => 'Ekisa n’okusonyiyibwa', 'Comfort' => 'Okubudaabudibwa', 'Joy' => 'Essanyu'];
 
 // [name, chapters, extra short names people type]
 const BIBLE_BOOKS = [
@@ -34,8 +54,14 @@ function bible_book_index(): array
     foreach (BIBLE_BOOKS as $n => [$name, , $alt]) {
         $idx[str_replace(' ', '', strtolower($name))] = $n;
         foreach (explode(' ', $alt) as $a) $idx[$a] = $n;
+        $idx[bible_squash(BIBLE_BOOKS_LG[$n])] ??= $n; // Luganda: "Yokaana", "Zabbuli", "Ebikolwa by'Abatume"
     }
     return $idx;
+}
+
+function bible_squash(string $s): string
+{
+    return str_replace([' ', "'", '’'], '', mb_strtolower($s));
 }
 
 // Finds a book from what someone typed: "John", "jn", "1 Cor", "I Corinthians", "Psalm", "Song of Songs".
@@ -45,7 +71,7 @@ function bible_find_book(string $s): ?int
     $s = preg_replace('/^(iii|3rd|third)\s*/', '3', $s);
     $s = preg_replace('/^(ii|2nd|second)\s*/', '2', $s);
     $s = preg_replace('/^(i|1st|first)\s+(?=[a-z])/', '1', $s);
-    $s = str_replace(' ', '', $s);
+    $s = str_replace([' ', "'", '’'], '', $s);
     if ($s === '') return null;
     $idx = bible_book_index();
     if (isset($idx[$s])) return $idx[$s];
@@ -53,14 +79,17 @@ function bible_find_book(string $s): ?int
     foreach (BIBLE_BOOKS as $n => [$name]) {
         if (str_starts_with(str_replace(' ', '', strtolower($name)), $s)) return $n;
     }
+    foreach (BIBLE_BOOKS_LG as $n => $name) {
+        if (strlen($s) >= 3 && str_starts_with(bible_squash($name), $s)) return $n;
+    }
     return null;
 }
 
 // "John 3:16", "Psalm 23", "Ps 23:1-4", "1 Cor 13:4-7", "Jude 3", "Romans 8:28 - 8:39" → [book, chapter, from, to] (from/to null = whole chapter)
 function bible_parse_ref(string $ref): ?array
 {
-    $ref = trim(str_replace(['–', '—', '.'], ['-', '-', ' '], $ref));
-    if (!preg_match('/^((?:[1-3]|i{1,3}|first|second|third|1st|2nd|3rd)?\s*[a-z][a-z\s]*?)\s*(\d+)(?:\s*:\s*(\d+)(?:\s*-\s*(?:\d+\s*:\s*)?(\d+))?)?\s*$/i', $ref, $m)) return null;
+    $ref = trim(str_replace(['–', '—', '.', '’'], ['-', '-', ' ', "'"], $ref));
+    if (!preg_match('/^((?:[1-3]|i{1,3}|first|second|third|1st|2nd|3rd)?\s*[a-z][a-z\s\']*?)\s*(\d+)(?:\s*:\s*(\d+)(?:\s*-\s*(?:\d+\s*:\s*)?(\d+))?)?\s*$/i', $ref, $m)) return null;
     $book = bible_find_book($m[1]);
     if (!$book) return null;
     $ch = (int)$m[2];
@@ -73,10 +102,11 @@ function bible_parse_ref(string $ref): ?array
     return [$book, $ch, $from, $to];
 }
 
-function bible_ref_label(array $p): string
+// Luganda references for the Luganda Bible ("Yokaana 3:16"), English for the others
+function bible_ref_label(array $p, string $tr = ''): string
 {
     [$b, $c, $f, $t] = $p;
-    $name = BIBLE_BOOKS[$b][0];
+    $name = $tr === 'lug' ? BIBLE_BOOKS_LG[$b] : BIBLE_BOOKS[$b][0];
     if ($name === 'Psalms') $name = 'Psalm';
     if ($f === null) return "$name $c";
     if (BIBLE_BOOKS[$b][1] === 1) return $f === $t ? "$name $f" : "$name $f-$t";
@@ -94,7 +124,11 @@ function bible_tr(string $tr): string
 function bible_ready(): bool
 {
     try {
-        return (int)(row("SELECT COUNT(*) AS n FROM bible_verses WHERE translation = 'kjv' AND book = 66")['n'] ?? 0) > 400;
+        // Every translation in api/data must be loaded (a site set up before Luganda was added picks it up here)
+        $n = rows("SELECT translation, COUNT(*) AS n FROM bible_verses WHERE book = 66 GROUP BY translation");
+        $have = array_column($n, 'n', 'translation');
+        foreach (array_keys(BIBLE_TRANSLATIONS) as $tr) if ((int)($have[$tr] ?? 0) < 300) return false;
+        return true;
     } catch (Throwable $e) {
         return false;
     }
@@ -107,7 +141,7 @@ function bible_import(): array
     foreach (array_keys(BIBLE_TRANSLATIONS) as $tr) {
         $file = dirname(__DIR__) . "/data/bible-$tr.tsv.gz";
         $have = (int)(row('SELECT COUNT(*) AS n FROM bible_verses WHERE translation = ?', [$tr])['n'] ?? 0);
-        if ($have > 31000) { $done[$tr] = $have; continue; }
+        if ($have > 30000) { $done[$tr] = $have; continue; }
         if (!is_file($file)) throw new ApiError(500, "The Bible file $file is missing.");
         db()->beginTransaction();
         q('DELETE FROM bible_verses WHERE translation = ?', [$tr]);
@@ -133,6 +167,8 @@ function bible_chapter(string $tr, int $book, int $ch): array
         'translation' => $tr,
         'book' => $book,
         'name' => BIBLE_BOOKS[$book][0],
+        'name_lg' => BIBLE_BOOKS_LG[$book],
+        'credit' => BIBLE_CREDITS[$tr] ?? '',
         'chapter' => $ch,
         'chapters' => BIBLE_BOOKS[$book][1],
         'verses' => array_map(fn($r) => ['v' => (int)$r['verse'], 't' => $r['text']],
@@ -156,7 +192,7 @@ function bible_passage(string $ref, string $tr = ''): ?array
     $vs = rows($sql . ' ORDER BY verse', $args);
     if (!$vs) return null;
     return [
-        'ref' => bible_ref_label($p),
+        'ref' => bible_ref_label($p, $tr),
         'translation' => $tr,
         'book' => $b,
         'chapter' => $c,
@@ -179,7 +215,7 @@ function bible_search(string $q, string $tr = '', int $limit = 60): array
     return [
         'translation' => $tr,
         'total' => $total,
-        'results' => array_map(fn($r) => ['ref' => bible_ref_label([(int)$r['book'], (int)$r['chapter'], (int)$r['verse'], (int)$r['verse']]),
+        'results' => array_map(fn($r) => ['ref' => bible_ref_label([(int)$r['book'], (int)$r['chapter'], (int)$r['verse'], (int)$r['verse']], $tr),
             'book' => (int)$r['book'], 'chapter' => (int)$r['chapter'], 'v' => (int)$r['verse'], 't' => $r['text']], $rs),
     ];
 }
@@ -281,18 +317,18 @@ function verse_for(string $date, string $kind = 'day', string $tr = ''): ?array
         'kind' => $kind,
         'date' => $key,
         'ref' => $p['ref'] ?? $ref,
-        'theme' => $theme,
+        'theme' => ($p['translation'] ?? '') === 'lug' ? (VERSE_THEMES_LG[$theme] ?? '') : $theme,
         'note' => $note,
         'text' => $p['text'] ?? '',
         'translation' => $p['translation'] ?? bible_tr($tr),
         'planned' => (bool)$planned,
-        'image' => site_path_image($key, $kind),
+        'image' => site_path_image($key, $kind, $p['translation'] ?? ''),
     ];
 }
 
-function site_path_image(string $date, string $kind): string
+function site_path_image(string $date, string $kind, string $tr = ''): string
 {
-    return "/api/verse/image?d=$date&k=$kind";
+    return "/api/verse/image?d=$date&k=$kind" . ($tr === 'lug' ? '&tr=lug' : '');
 }
 
 // ---------- Verse pictures for WhatsApp status, Facebook and email ----------
@@ -300,16 +336,17 @@ function site_path_image(string $date, string $kind): string
 const VERSE_PHOTOS = ['worship-outdoor', 'church-dusk', 'kneeling-prayer', 'women-praise', 'church-tree', 'service-hall', 'crusade-field', 'worship-leader', 'church-front', 'fellowship'];
 
 // Draws the verse picture and keeps it in uploads/verses/. $size: 'post' (1080×1350) or 'story' (1080×1920).
-function verse_image(string $date, string $kind, string $size): string
+function verse_image(string $date, string $kind, string $size, string $tr = ''): string
 {
     $date = date('Y-m-d', strtotime($date . ' 12:00:00'));
     $kind = $kind === 'week' ? 'week' : 'day';
     $size = $size === 'story' ? 'story' : 'post';
-    $v = verse_for($date, $kind);
+    $v = verse_for($date, $kind, isset(BIBLE_TRANSLATIONS[$tr]) ? $tr : '');
+    $lg = $v['translation'] === 'lug';
     if (!$v || $v['text'] === '') throw new ApiError(503, 'The Bible text is not loaded yet.');
     $dir = rtrim((string)config('uploads_dir'), '/') . '/verses';
     if (!is_dir($dir)) @mkdir($dir, 0755, true);
-    $file = "$dir/{$v['date']}-$kind-$size-" . substr(md5($v['ref'] . $v['text'] . $v['translation'] . '5'), 0, 8) . '.jpg';
+    $file = "$dir/{$v['date']}-$kind-$size-" . substr(md5($v['ref'] . $v['text'] . $v['translation'] . '6'), 0, 8) . '.jpg';
     if (is_file($file)) return $file;
 
     [$W, $H] = $size === 'story' ? [1080, 1920] : [1080, 1350];
@@ -345,7 +382,7 @@ function verse_image(string $date, string $kind, string $size): string
     $sans = "$fonts/Poppins-Medium.ttf";
     $pad = 110;
 
-    $eyebrow = $kind === 'week' ? 'VERSE OF THE WEEK' : 'VERSE OF THE DAY';
+    $eyebrow = $lg ? ($kind === 'week' ? 'EKYAWANDIIKIBWA KYA WIIKI' : 'EKYAWANDIIKIBWA KYA LEERO') : ($kind === 'week' ? 'VERSE OF THE WEEK' : 'VERSE OF THE DAY');
     $top = $size === 'story' ? 330 : 190;
     verse_text_spaced($im, 26, $label, $gold, $eyebrow, $W, $top, 6);
     $theme = mb_strtoupper($v['theme']);

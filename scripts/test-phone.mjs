@@ -36,7 +36,7 @@ const check = (name, ok, info = '') => { console.log((ok ? 'PASS ' : 'FAIL ') + 
 const shot = async (page, name) => { if (SHOTS) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: join(SHOTS, name + '.png'), fullPage: true }); } };
 
 const PAGES = ['/', '/about', '/ministries', '/sermons', '/bible', '/events', '/gallery', '/prayer', '/give', '/contact', '/no-such-page'];
-const ADMIN = ['dashboard', 'inbox', 'sermons', 'videos', 'photos', 'events', 'announcements', 'testimonies', 'verses', 'letters', 'subscribers', 'sms_contacts', 'gifts', 'messages', 'senders', 'history', 'settings', 'account'];
+const ADMIN = ['dashboard', 'inbox', 'sermons', 'videos', 'photos', 'events', 'announcements', 'testimonies', 'verses', 'letters', 'subscribers', 'sms_contacts', 'gifts', 'messages', 'senders', 'social', 'text', 'history', 'settings', 'account'];
 const PHONES = [
   ['small Android 320px', { viewport: { width: 320, height: 640 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }],
   ['Android 360px', { viewport: { width: 360, height: 780 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }],
@@ -47,7 +47,12 @@ const PHONES = [
 // What a page looks like to a phone user, measured in the browser
 const audit = () => {
   const vis = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
-  const out = { overflow: document.documentElement.scrollWidth - window.innerWidth, h1: document.querySelectorAll('h1').length, noAlt: [], smallInputs: [], smallTaps: [], tinyText: [] };
+  const out = { overflow: document.documentElement.scrollWidth - window.innerWidth, h1: document.querySelectorAll('h1').length, noAlt: [], smallInputs: [], smallTaps: [], tinyText: [], sameTab: [], lang: document.documentElement.lang,
+    toggle: [...document.querySelectorAll('.langbtn')].filter(vis).map((b) => b.textContent.trim()) };
+  // Links to other websites must open in a new tab, safely
+  for (const a of document.querySelectorAll('a[href^="http"]')) {
+    if (new URL(a.href).host !== location.host && (a.target !== '_blank' || !/noopener/.test(a.rel))) out.sameTab.push(a.href.slice(0, 60));
+  }
   for (const img of document.querySelectorAll('img')) if (!img.hasAttribute('alt')) out.noAlt.push(img.src.split('/').pop());
   for (const el of document.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([name=website]), select, textarea')) {
     if (vis(el) && parseFloat(getComputedStyle(el).fontSize) < 16) out.smallInputs.push(el.id || el.name || el.tagName);
@@ -90,12 +95,32 @@ try {
       check(`${name}: form fields are 16px+ (no zoom-in on iPhone)`, !a.smallInputs.length, a.smallInputs);
       check(`${name}: buttons are big enough to tap`, !a.smallTaps.length, a.smallTaps);
       check(`${name}: no tiny text`, !a.tinyText.length, a.tinyText);
+      check(`${name}: links to other websites open in a new tab`, !a.sameTab.length, a.sameTab);
+      check(`${name}: English / Luganda button on screen`, a.toggle.length === 1 && a.toggle[0] === 'Luganda', a.toggle);
       if (label === 'Android 360px') {
         check(`${name}: first load under 3 MB`, bytes < 3_000_000, `${(bytes / 1e6).toFixed(2)} MB`);
         console.log(`     ${path}: ${(bytes / 1e6).toFixed(2)} MB, ${ms} ms`);
       }
       await shot(page, `${label.replace(/\W+/g, '-')}${path.replace(/\W+/g, '-') || '-home'}`);
     }
+
+    // The whole site in Luganda: press the language button, then every page again
+    await page.goto(BASE + '/');
+    await page.click('.langbtn >> visible=true');
+    await page.waitForFunction(() => document.documentElement.lang === 'lg');
+    for (const path of PAGES) {
+      await page.goto(BASE + path, { waitUntil: 'networkidle' });
+      const a = await page.evaluate(audit);
+      const name = `${path} in Luganda on ${label}`;
+      check(`${name}: shows Luganda`, a.lang === 'lg' && a.toggle[0] === 'English', { lang: a.lang, toggle: a.toggle });
+      check(`${name}: fits the screen`, a.overflow <= 1, `${a.overflow}px too wide`);
+      check(`${name}: buttons are big enough to tap`, !a.smallTaps.length, a.smallTaps);
+      check(`${name}: every picture has a description`, !a.noAlt.length, a.noAlt);
+      await shot(page, `${label.replace(/\W+/g, '-')}-lg${path.replace(/\W+/g, '-') || '-home'}`);
+    }
+    await page.click('.langbtn >> visible=true');
+    await page.waitForFunction(() => document.documentElement.lang === 'en');
+    check(`language choice goes back to English on ${label}`, true);
 
     // The phone menu opens and every link in it works
     await page.goto(BASE + '/');

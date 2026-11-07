@@ -17,7 +17,7 @@ const LAN = flag('lan');
 const ROOT = resolve('.');
 const HOME = join(ROOT, '.local');
 const WEB = join(HOME, 'public_html');
-const ADMIN = { email: 'admin@phomi.local', password: 'preview-password' };
+const ADMIN = { email: 'formcraftinc@gmail.com', password: 'Potters-preview' }; // local only: change it in Admin → Account
 const php = process.env.PHP || 'php';
 
 const fail = (msg) => { console.error(`\n✖ ${msg}\n`); process.exit(1); };

@@ -9,41 +9,47 @@ declare(strict_types=1);
 
 function subscribe_start(array $b): array
 {
-    if (trim((string)($b['website'] ?? '')) !== '') return ['ok' => true, 'message' => 'Thank you.']; // bots fill the hidden field
+    $lg = ($b['lang'] ?? '') === 'lg';
+    $L = fn(string $en, string $lgText) => $lg ? $lgText : $en; // the answer in the visitor's language
+    if (trim((string)($b['website'] ?? '')) !== '') return ['ok' => true, 'message' => $L('Thank you.', 'Webale.')]; // bots fill the hidden field
     $email = strtolower(str_in($b, 'email', 190));
     $name = str_in($b, 'name', 120);
     $phoneRaw = str_in($b, 'phone', 30);
     $wantsSms = !empty($b['sms']) && $phoneRaw !== '';
     $wantsCall = !empty($b['call']) && $phoneRaw !== '';
-    if ((!empty($b['sms']) || !empty($b['call'])) && $phoneRaw === '') throw new ApiError(422, 'Add your phone number, so we can send the SMS or call you.');
-    if ($email === '' && !$wantsSms && !$wantsCall) throw new ApiError(422, 'Enter your email address, or your phone number for the SMS verse or a call.');
-    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) throw new ApiError(422, 'Please enter a valid email address.');
+    if ((!empty($b['sms']) || !empty($b['call'])) && $phoneRaw === '') throw new ApiError(422, $L('Add your phone number, so we can send the SMS or call you.', 'Wandiika ennamba yo ey’essimu, tusobole okukuweereza SMS oba okukukubira.'));
+    if ($email === '' && !$wantsSms && !$wantsCall) throw new ApiError(422, $L('Enter your email address, or your phone number for the SMS verse or a call.', 'Wandiika email yo, oba ennamba yo ey’essimu okufuna ekyawandiikibwa ku SMS oba okukubirwa.'));
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) throw new ApiError(422, $L('Please enter a valid email address.', 'Wandiika email entuufu.'));
     $daily = !empty($b['daily']) ? 1 : 0;
     $weekly = !empty($b['weekly']) ? 1 : 0;
-    if ($email !== '' && !$daily && !$weekly) throw new ApiError(422, 'Choose the daily verse, the weekly letter, or both.');
+    if ($email !== '' && !$daily && !$weekly) throw new ApiError(422, $L('Choose the daily verse, the weekly letter, or both.', 'Londa ekyawandiikibwa kya buli lunaku, ebbaluwa ya buli wiiki, oba byombi.'));
     rate_limit('subscribe:' . client_ip(), 6, 60);
     $smsMsg = '';
     $phone = '';
     $wants = [];
     if ($wantsSms || $wantsCall) {
         $phone = sms_phone($phoneRaw);
-        if (!$phone) throw new ApiError(422, 'That phone number was not understood. Write it like 0772 123456, or with + and the country code.');
+        if (!$phone) throw new ApiError(422, $L('That phone number was not understood. Write it like 0772 123456, or with + and the country code.', 'Ennamba eyo tetegeerekese. Giwandiike nga 0772 123456, oba ne + n’ennamba y’eggwanga.'));
         $c = row('SELECT * FROM sms_contacts WHERE phone = ?', [$phone]);
         $daily = $wantsSms ? 1 : (int)($c['daily'] ?? 0);
         $call = $wantsCall ? 1 : (int)($c['call_me'] ?? 0);
-        if ($c) q("UPDATE sms_contacts SET status = 'active', daily = ?, call_me = ?, name = ? WHERE id = ?", [$daily, $call, $name ?: $c['name'], $c['id']]);
-        else insert('sms_contacts', ['phone' => $phone, 'name' => $name, 'daily' => $daily, 'call_me' => $call, 'status' => 'active', 'source' => 'website', 'created_at' => now()]);
+        if ($c) q("UPDATE sms_contacts SET status = 'active', daily = ?, call_me = ?, name = ?, lang = ? WHERE id = ?", [$daily, $call, $name ?: $c['name'], $lg ? 'lg' : 'en', $c['id']]);
+        else insert('sms_contacts', ['phone' => $phone, 'name' => $name, 'daily' => $daily, 'call_me' => $call, 'lang' => $lg ? 'lg' : 'en', 'status' => 'active', 'source' => 'website', 'created_at' => now()]);
         if ($wantsSms) $wants[] = 'the Verse of the Day by SMS';
         if ($wantsCall) $wants[] = 'a call from the church';
-        $smsMsg = $wantsCall ? ' Someone from the church will call you.' : ' Your number is on the SMS list.';
+        if ($lg) $wants[] = 'messages in Luganda';
+        $smsMsg = $wantsCall ? $L(' Someone from the church will call you.', ' Omu ku b’ekkanisa ajja kukukubira.') : $L(' Your number is on the SMS list.', ' Ennamba yo eri ku lukalala lwa SMS.');
     }
     if ($email === '') {
         lists_alert_signup(['name' => $name, 'email' => '', 'phone' => $phone, 'wants' => $wants]);
-        return ['ok' => true, 'message' => $wantsCall ? 'Thank you. Someone from the church will call you soon.' . ($wantsSms ? ' Your number is also on the SMS verse list.' : '') : 'Thank you. Your number is on the list for the Verse of the Day by SMS.'];
+        return ['ok' => true, 'message' => $wantsCall
+            ? $L('Thank you. Someone from the church will call you soon.', 'Webale. Omu ku b’ekkanisa ajja kukukubira mangu.') . ($wantsSms ? $L(' Your number is also on the SMS verse list.', ' Ennamba yo era eri ku lukalala lw’ebyawandiikibwa ku SMS.') : '')
+            : $L('Thank you. Your number is on the list for the Verse of the Day by SMS.', 'Webale. Ennamba yo eri ku lukalala lw’Ekyawandiikibwa kya Leero ku SMS.')];
     }
     rate_limit('subscribe:' . $email, 3, 60 * 24);
     if (!empty($b['daily'])) $wants[] = 'the Verse of the Day by email';
     if (!empty($b['weekly'])) $wants[] = 'the weekly letter';
+    if ($lg && !in_array('messages in Luganda', $wants, true)) $wants[] = 'messages in Luganda';
 
     $s = row('SELECT * FROM subscribers WHERE email = ?', [$email]);
     if ($s && $s['status'] === 'active') {
@@ -52,17 +58,23 @@ function subscribe_start(array $b): array
     } else {
         $token = random_token(20);
         if ($s) {
-            q('UPDATE subscribers SET name = ?, daily = ?, weekly = ?, status = ?, token = ? WHERE id = ?', [$name ?: $s['name'], $daily, $weekly, 'pending', $token, $s['id']]);
+            q('UPDATE subscribers SET name = ?, daily = ?, weekly = ?, status = ?, token = ?, lang = ? WHERE id = ?', [$name ?: $s['name'], $daily, $weekly, 'pending', $token, $lg ? 'lg' : 'en', $s['id']]);
         } else {
-            insert('subscribers', ['email' => $email, 'name' => $name, 'daily' => $daily, 'weekly' => $weekly, 'status' => 'pending', 'token' => $token, 'source' => 'website', 'created_at' => now()]);
+            insert('subscribers', ['email' => $email, 'name' => $name, 'daily' => $daily, 'weekly' => $weekly, 'status' => 'pending', 'token' => $token, 'lang' => $lg ? 'lg' : 'en', 'source' => 'website', 'created_at' => now()]);
         }
         $s = row('SELECT * FROM subscribers WHERE email = ?', [$email]);
-        $what = $daily && $weekly ? 'the Verse of the Day and the weekly letter' : ($daily ? 'the Verse of the Day' : 'the weekly letter');
-        send_mail($email, 'Please confirm: verse emails from Potter\'s House', "Hello" . ($name ? " $name" : '') . ",\n\nSomeone (we hope you) asked to receive $what from Potter's House Outreach Ministries International.\n\n"
-            . "Confirm here:\n" . subscriber_link($s, 'confirm') . "\n\nIf this wasn't you, ignore this email and nothing will be sent.\n\nPotter's House Outreach Ministries International");
+        if ($lg) {
+            $what = $daily && $weekly ? 'Ekyawandiikibwa kya Leero n’ebbaluwa ya buli wiiki' : ($daily ? 'Ekyawandiikibwa kya Leero' : 'ebbaluwa ya buli wiiki');
+            send_mail($email, 'Kakasa: email z’ebyawandiikibwa okuva mu Potter\'s House', "Gyebale ko" . ($name ? " $name" : '') . ",\n\nOmuntu (tusuubira ggwe) asabye okufuna $what okuva mu Potter's House Outreach Ministries International.\n\n"
+                . "Kakasa wano:\n" . subscriber_link($s, 'confirm') . "\n\nBw’oba si ggwe, leka email eno era tewali kijja kuweerezebwa.\n\n(English: someone asked to receive verse emails at this address. Press the link above to confirm, or ignore this email.)\n\nPotter's House Outreach Ministries International");
+        } else {
+            $what = $daily && $weekly ? 'the Verse of the Day and the weekly letter' : ($daily ? 'the Verse of the Day' : 'the weekly letter');
+            send_mail($email, 'Please confirm: verse emails from Potter\'s House', "Hello" . ($name ? " $name" : '') . ",\n\nSomeone (we hope you) asked to receive $what from Potter's House Outreach Ministries International.\n\n"
+                . "Confirm here:\n" . subscriber_link($s, 'confirm') . "\n\nIf this wasn't you, ignore this email and nothing will be sent.\n\nPotter's House Outreach Ministries International");
+        }
     }
     if (!$s || $s['status'] !== 'active') lists_alert_signup(['name' => $name, 'email' => $email, 'phone' => $phone, 'wants' => $wants]);
-    return ['ok' => true, 'message' => 'Almost done. We sent you an email: open it and press Confirm.' . $smsMsg];
+    return ['ok' => true, 'message' => $L('Almost done. We sent you an email: open it and press Confirm.', 'Kumpi kuggwa. Tukuweerezza email: gigulewo onyige Kakasa (Confirm).') . $smsMsg];
 }
 
 function subscriber_link(array $s, string $do): string
@@ -215,12 +227,15 @@ function letter_audience_count(array $l): int
 // Builds one email: [subject, plain text, HTML]
 function letter_render(array $l, ?array $s = null): array
 {
-    $v = verse_for($l['for_date'], $l['kind']);
+    $lg = ($s['lang'] ?? '') === 'lg'; // people who signed up in Luganda get the Luganda Bible and wording
+    $W = fn(string $en, string $lgText) => $lg ? $lgText : $en;
+    $v = verse_for($l['for_date'], $l['kind'], $lg ? 'lug' : '');
     $h = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES);
     $site = site_url('');
-    $hello = $s && $s['name'] ? 'Hello ' . $s['name'] . ',' : '';
-    $read = site_url('/bible?ref=' . rawurlencode($v['ref']));
-    $img = site_url("/api/verse/image?d={$v['date']}&k={$v['kind']}&s=post");
+    $hello = $s && $s['name'] ? $W('Hello ', 'Gyebale ko ') . $s['name'] . ',' : '';
+    $read = site_url('/bible?ref=' . rawurlencode($v['ref']) . ($lg ? '&tr=lug&lang=lg' : ''));
+    $img = site_url("/api/verse/image?d={$v['date']}&k={$v['kind']}&s=post" . ($lg ? '&tr=lug' : ''));
+    $trName = $v['translation'] === 'lug' ? 'Luganda' : strtoupper($v['translation']);
     $share = 'https://wa.me/?text=' . rawurlencode("“{$v['text']}” {$v['ref']}\n\n$read");
     $manage = $s ? site_url('/api/subscription?t=' . $s['token']) : site_url('/bible');
     $note = trim((string)($l['note'] ?? '')) ?: trim((string)$v['note']);
@@ -228,18 +243,18 @@ function letter_render(array $l, ?array $s = null): array
     $sections = '';
     $textSections = '';
     if ($l['kind'] === 'week') {
-        $subject = "This week at Potter's House: {$v['theme']}";
+        $subject = $W("This week at Potter's House: ", "Wiiki eno mu Potter's House: ") . $v['theme'];
         $sermon = row("SELECT title, preacher, preached_on FROM sermons WHERE status = 'live' AND preached_on >= ? ORDER BY preached_on DESC, id DESC LIMIT 1", [date('Y-m-d', strtotime($l['for_date'] . ' -8 days'))]);
         if ($sermon) {
             $by = trim(($sermon['preacher'] ? $sermon['preacher'] . ', ' : '') . date('j M', strtotime($sermon['preached_on'])), ', ');
-            $sections .= '<h2 style="font:600 18px Georgia,serif;margin:28px 0 6px">Last Sunday\'s message</h2><p style="margin:0"><a href="' . $h(site_url('/sermons')) . '" style="color:#A03207">' . $h($sermon['title']) . '</a> (' . $h($by) . ')</p>';
-            $textSections .= "\nLAST SUNDAY'S MESSAGE\n{$sermon['title']} ($by)\n" . site_url('/sermons') . "\n";
+            $sections .= '<h2 style="font:600 18px Georgia,serif;margin:28px 0 6px">' . $W('Last Sunday\'s message', 'Obubaka bwa Ssande ewedde') . '</h2><p style="margin:0"><a href="' . $h(site_url('/sermons')) . '" style="color:#A03207">' . $h($sermon['title']) . '</a> (' . $h($by) . ')</p>';
+            $textSections .= "\n" . $W("LAST SUNDAY'S MESSAGE", 'OBUBAKA BWA SSANDE EWEDDE') . "\n{$sermon['title']} ($by)\n" . site_url('/sermons') . "\n";
         }
         $events = rows("SELECT title, starts_at, venue FROM events WHERE status = 'live' AND starts_at >= ? AND starts_at < ? ORDER BY starts_at LIMIT 5",
             [$l['for_date'] . ' 00:00:00', date('Y-m-d', strtotime($l['for_date'] . ' +15 days')) . ' 00:00:00']);
         if ($events) {
-            $sections .= '<h2 style="font:600 18px Georgia,serif;margin:28px 0 6px">Coming up</h2><ul style="margin:0;padding-left:18px">';
-            $textSections .= "\nCOMING UP\n";
+            $sections .= '<h2 style="font:600 18px Georgia,serif;margin:28px 0 6px">' . $W('Coming up', 'Ebijja') . '</h2><ul style="margin:0;padding-left:18px">';
+            $textSections .= "\n" . $W('COMING UP', 'EBIJJA') . "\n";
             foreach ($events as $e) {
                 $when = date('D j M, g:ia', strtotime($e['starts_at']));
                 $sections .= '<li style="margin:4px 0"><b>' . $h($e['title']) . '</b>, ' . $h($when) . ($e['venue'] ? ', ' . $h($e['venue']) : '') . '</li>';
@@ -249,25 +264,25 @@ function letter_render(array $l, ?array $s = null): array
         }
         $news = rows("SELECT title FROM announcements WHERE status = 'live' AND (starts_on IS NULL OR starts_on <= ?) AND (ends_on IS NULL OR ends_on >= ?) ORDER BY id DESC LIMIT 3", [$l['for_date'], $l['for_date']]);
         if ($news) {
-            $sections .= '<h2 style="font:600 18px Georgia,serif;margin:28px 0 6px">Notices</h2><ul style="margin:0;padding-left:18px">';
-            $textSections .= "\nNOTICES\n";
+            $sections .= '<h2 style="font:600 18px Georgia,serif;margin:28px 0 6px">' . $W('Notices', 'Ebirango') . '</h2><ul style="margin:0;padding-left:18px">';
+            $textSections .= "\n" . $W('NOTICES', 'EBIRANGO') . "\n";
             foreach ($news as $n) {
                 $sections .= '<li style="margin:4px 0">' . $h($n['title']) . '</li>';
                 $textSections .= "- {$n['title']}\n";
             }
             $sections .= '</ul>';
         }
-        $sections .= '<p style="margin:28px 0 0">Need prayer? <a href="' . $h(site_url('/prayer')) . '" style="color:#A03207">Send a prayer request</a>. The pastoral team prays over every one.</p>';
-        $textSections .= "\nNeed prayer? Send a prayer request: " . site_url('/prayer') . "\n";
-        $eyebrow = 'Verse of the Week';
+        $sections .= '<p style="margin:28px 0 0">' . $W('Need prayer?', 'Oyagala okusabirwa?') . ' <a href="' . $h(site_url('/prayer')) . '" style="color:#A03207">' . $W('Send a prayer request', 'Tuweereze ky’oyagala tusabire') . '</a>. ' . $W('The pastoral team prays over every one.', 'Abasumba basabira buli kimu.') . '</p>';
+        $textSections .= "\n" . $W('Need prayer? Send a prayer request: ', 'Oyagala okusabirwa? Tuweereze: ') . site_url('/prayer') . "\n";
+        $eyebrow = $W('Verse of the Week', 'Ekyawandiikibwa kya Wiiki');
     } else {
-        $subject = "Verse of the Day: {$v['ref']}";
-        $eyebrow = 'Verse of the Day';
+        $subject = $W('Verse of the Day: ', 'Ekyawandiikibwa kya Leero: ') . $v['ref'];
+        $eyebrow = $W('Verse of the Day', 'Ekyawandiikibwa kya Leero');
     }
 
-    $text = ($hello ? "$hello\n\n" : '') . strtoupper($eyebrow) . " · {$v['theme']}\n\n“{$v['text']}”\n{$v['ref']} (" . strtoupper($v['translation']) . ")\n"
-        . ($note ? "\n$note\n" : '') . "\nRead the whole chapter: $read\nShare on WhatsApp: $share\n$textSections"
-        . "\n--\nPotter's House Outreach Ministries International\nBurweta, Butebo District · P.O. Box 1972, Mbale, Uganda\n$site\n\nChange what you receive or unsubscribe: $manage\n";
+    $text = ($hello ? "$hello\n\n" : '') . strtoupper($eyebrow) . " · {$v['theme']}\n\n“{$v['text']}”\n{$v['ref']} ($trName)\n"
+        . ($note ? "\n$note\n" : '') . "\n" . $W('Read the whole chapter: ', 'Soma essuula yonna: ') . "$read\n" . $W('Share on WhatsApp: ', 'Gabana ku WhatsApp: ') . "$share\n$textSections"
+        . "\n--\nPotter's House Outreach Ministries International\nBurweta, Butebo District · P.O. Box 1972, Mbale, Uganda\n$site\n\n" . $W('Change what you receive or unsubscribe: ', 'Kyusa by’ofuna oba lekera awo: ') . "$manage\n";
 
     $html = '<!doctype html><html><body style="margin:0;background:#F4EDE1"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4EDE1"><tr><td align="center" style="padding:24px 12px">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFCF7;border-radius:12px;overflow:hidden;font-family:Helvetica,Arial,sans-serif;color:#1B2A47;font-size:16px;line-height:1.6">'
@@ -277,13 +292,13 @@ function letter_render(array $l, ?array $s = null): array
         . ($hello ? '<p style="margin:0 0 12px">' . $h($hello) . '</p>' : '')
         . '<p style="margin:0;color:#8a6a1f;font-size:12px;letter-spacing:.14em;text-transform:uppercase">' . $h($v['theme']) . '</p>'
         . '<p style="margin:6px 0 4px;font:italic 21px/1.5 Georgia,serif">“' . $h($v['text']) . '”</p>'
-        . '<p style="margin:0;font-weight:bold;color:#A03207">' . $h($v['ref']) . ' <span style="color:#5B6478;font-weight:normal">(' . $h(strtoupper($v['translation'])) . ')</span></p>'
+        . '<p style="margin:0;font-weight:bold;color:#A03207">' . $h($v['ref']) . ' <span style="color:#5B6478;font-weight:normal">(' . $h($trName) . ')</span></p>'
         . ($note ? '<p style="margin:18px 0 0;white-space:pre-line">' . $h($note) . '</p>' : '')
-        . '<p style="margin:20px 0 0"><a href="' . $h($read) . '" style="display:inline-block;background:#A03207;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:bold;font-size:14px">Read the chapter</a> &nbsp; '
-        . '<a href="' . $h($share) . '" style="display:inline-block;background:#1B2A47;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:bold;font-size:14px">Share on WhatsApp</a></p>'
+        . '<p style="margin:20px 0 0"><a href="' . $h($read) . '" style="display:inline-block;background:#A03207;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:bold;font-size:14px">' . $W('Read the chapter', 'Soma essuula') . '</a> &nbsp; '
+        . '<a href="' . $h($share) . '" style="display:inline-block;background:#1B2A47;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:bold;font-size:14px">' . $W('Share on WhatsApp', 'Gabana ku WhatsApp') . '</a></p>'
         . $sections
         . '</td></tr><tr><td style="padding:18px 24px;border-top:1px solid #E4D9C6;font-size:12px;color:#5B6478">Potter\'s House Outreach Ministries International<br>Burweta, Butebo District · P.O. Box 1972, Mbale, Uganda<br>'
-        . '<a href="' . $h($site) . '" style="color:#5B6478">' . $h(preg_replace('#^https?://#', '', $site)) . '</a> · <a href="' . $h($manage) . '" style="color:#5B6478">Change what you receive or unsubscribe</a></td></tr>'
+        . '<a href="' . $h($site) . '" style="color:#5B6478">' . $h(preg_replace('#^https?://#', '', $site)) . '</a> · <a href="' . $h($manage) . '" style="color:#5B6478">' . $W('Change what you receive or unsubscribe', 'Kyusa by’ofuna oba lekera awo') . '</a></td></tr>'
         . '</table></td></tr></table></body></html>';
     return [$subject, $text, $html];
 }

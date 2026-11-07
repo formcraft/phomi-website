@@ -48,7 +48,7 @@ if (!bible_ready()) {
         error_log('PHOMI Bible import: ' . $e->getMessage());
     }
 }
-$list .= '<ul><li>' . (bible_ready() ? '✅ Bible text loaded (KJV and WEB)' : '❌ Bible text not loaded yet: reload this page to try again') . '</li></ul>';
+$list .= '<ul><li>' . (bible_ready() ? '✅ Bible text loaded (KJV, WEB and Luganda)' : '❌ Bible text not loaded yet: reload this page to try again') . '</li></ul>';
 $uploads = uploads_ready(date('Y/m'));
 $hasAdmin = (int)(row('SELECT COUNT(*) AS n FROM admins')['n'] ?? 0) > 0;
 

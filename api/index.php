@@ -85,7 +85,7 @@ function route(string $method, string $path): void
     if ($is('GET', '/verse/image')) {
         $d = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_GET['d'] ?? '')) ? $_GET['d'] : date('Y-m-d');
         if (abs(strtotime($d) - time()) > 120 * 86400) throw new ApiError(404, 'Pictures are made for dates near today only.');
-        $file = verse_image($d, (string)($_GET['k'] ?? 'day'), (string)($_GET['s'] ?? 'post'));
+        $file = verse_image($d, (string)($_GET['k'] ?? 'day'), (string)($_GET['s'] ?? 'post'), (string)($_GET['tr'] ?? ''));
         header('Content-Type: image/jpeg');
         header('Cache-Control: public, max-age=3600');
         if (isset($_GET['download'])) header('Content-Disposition: attachment; filename="verse-' . basename($file) . '"');
@@ -278,6 +278,20 @@ function route(string $method, string $path): void
         header('Cache-Control: no-store');
         header('Content-Disposition: attachment; filename="phomi-' . ($kind === 'phones' ? 'phone' : 'email') . '-list.csv"');
         echo lists_csv($kind);
+        return;
+    }
+    if ($method === 'GET' && $sub === '/text') {
+        json_out(['text' => site_text_all() ?: new stdClass(), 'theme' => json_decode(setting('site_theme') ?: '{}', true) ?: new stdClass(), 'fonts' => TEXT_FONTS]);
+        return;
+    }
+    if ($method === 'POST' && $sub === '/text') {
+        json_out(site_text_save(body()));
+        return;
+    }
+    if ($method === 'POST' && $sub === '/text/reset') {
+        $k = (string)(body()['k'] ?? '');
+        if (!text_key_ok($k)) throw new ApiError(422, 'Unknown text.');
+        json_out(site_text_reset($k));
         return;
     }
     if ($method === 'GET' && $sub === '/lists') {

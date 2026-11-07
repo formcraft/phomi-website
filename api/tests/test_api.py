@@ -283,6 +283,47 @@ try:
     code, img = call('GET', vd['image'] + '&s=story', admin=False, raw=True)
     check('verse picture is drawn', code == 200, code)
 
+    # ---- Luganda Bible (Bayibuli Entukuvu) ----
+    code, r = call('GET', '/api/bible/lug/43/3', admin=False)
+    check('Luganda Bible chapter loads (Yokaana 3)', code == 200 and len(r['verses']) == 36 and r['name_lg'] == 'Yokaana' and 'Katonda' in r['verses'][15]['t'], r.get('verses', [])[15:16])
+    check('Luganda chapters carry the Biblica credit', 'Biblica' in r.get('credit', '') and 'CC BY-SA' in r.get('credit', ''), r.get('credit'))
+    code, r = call('GET', '/api/bible/search?q=' + urllib.parse.quote('Yokaana 3:16') + '&tr=lug', admin=False)
+    check('a Luganda reference opens the verse', code == 200 and r['passage']['ref'] == 'Yokaana 3:16' and r['highlight'] == [16], r.get('passage'))
+    code, r = call('GET', '/api/bible/search?q=' + urllib.parse.quote('zabbuli 23') + '&tr=lug', admin=False)
+    check('Luganda book names work in lower case (zabbuli 23)', code == 200 and r['chapter']['book'] == 19 and r['chapter']['chapter'] == 23, r.get('chapter', {}).get('name'))
+    code, r = call('GET', '/api/bible/search?q=' + urllib.parse.quote('John 3:16') + '&tr=lug', admin=False)
+    check('English book names also open the Luganda Bible', code == 200 and r['passage']['ref'] == 'Yokaana 3:16', r.get('passage'))
+    code, c = call('GET', '/api/content', admin=False)
+    vl = c.get('verse_lg', {}).get('day', {})
+    check('the site carries the Luganda Verse of the Day', vl.get('translation') == 'lug' and vl.get('text') and vl.get('text') != vd.get('text'), vl)
+    code, img = call('GET', vl['image'] + '&s=story', admin=False, raw=True)
+    check('Luganda verse picture is drawn', code == 200 and 'tr=lug' in vl['image'], vl.get('image'))
+
+    # ---- Site text: the church's own wording, fonts and colours ----
+    code, r = call('POST', '/api/admin/text', {'k': 'home.heroTitle', 'en': 'Made new', 'lg': 'Tufuulibwa abaggya', 'style': {'font': 'Georgia', 'size': 40, 'color': '#1f6f3a', 'weight': 700, 'italic': True}})
+    check('admin saves site text in both languages with a style', code == 200 and r['text']['lg'] == 'Tufuulibwa abaggya' and r['text']['style'] == {'font': 'Georgia', 'size': 40, 'color': '#1f6f3a', 'weight': 700, 'italic': True}, r)
+    code, r = call('POST', '/api/admin/text', {'k': 'home.heroSub', 'en': '<script>alert(1)</script>', 'style': {'font': "Comic'; } body{display:none", 'size': 900, 'color': 'red;background:url(x)', 'weight': 950}})
+    check('bad fonts, sizes and colours are dropped', code == 200 and 'style' not in r['text'], r)
+    code, r = call('POST', '/api/admin/text', {'k': '../../etc/passwd', 'en': 'x'})
+    check('unknown text keys are refused', code == 422, r)
+    code, c = call('GET', '/api/content', admin=False)
+    check('the site gets the new wording', c['text']['home.heroTitle']['en'] == 'Made new' and c['text']['home.heroSub']['en'] == '<script>alert(1)</script>', c.get('text'))
+    code, r = call('POST', '/api/admin/text', {'k': 'home.heroTitle', 'lg': 'Kakensa ewaka', 'style': {}})
+    code, h = call('GET', '/api/admin/changes')
+    ch = next(i for i in h['items'] if i['table_name'] == 'site_text' and i['action'] == 'update')
+    code, r = call('POST', f"/api/admin/changes/{ch['id']}/undo", {})
+    code, c = call('GET', '/api/content', admin=False)
+    check('undo brings back the earlier site text', c['text']['home.heroTitle'].get('lg') == 'Tufuulibwa abaggya', c['text'].get('home.heroTitle'))
+    code, r = call('POST', '/api/admin/text/reset', {'k': 'home.heroSub'})
+    code, c = call('GET', '/api/content', admin=False)
+    check('reset puts back the built-in wording', 'home.heroSub' not in c['text'], c.get('text'))
+    code, r = call('POST', '/api/admin/settings', {'site_theme': json.dumps({'head': 'Georgia', 'body': 'Comic Sans', 'text': '#222222', 'clay': 'javascript:1', 'scale': 300}), 'default_lang': 'lg'})
+    code, c = call('GET', '/api/content', admin=False)
+    th = json.loads(c['settings'].get('site_theme') or '{}')
+    check('whole-site look keeps only safe values', th == {'head': 'Georgia', 'text': '#222222'}, th)
+    check('first language for new visitors is saved', c['settings'].get('default_lang') == 'lg', c['settings'].get('default_lang'))
+    call('POST', '/api/admin/settings', {'site_theme': '', 'default_lang': 'en'})
+
     code, r = call('POST', '/api/admin/r/verses', {'show_on': time.strftime('%Y-%m-%d'), 'kind': 'day', 'reference': 'Not a verse 99', 'theme': 'x'})
     check('planned verse needs a real reference', code == 422, r)
     code, r = call('POST', '/api/admin/r/verses', {'show_on': time.strftime('%Y-%m-%d'), 'kind': 'day', 'reference': 'ps 23:1-3', 'theme': 'Trust', 'note': 'Read it slowly today.'})
@@ -331,6 +372,16 @@ try:
     code, r = call('GET', '/api/content', admin=False)
     check('the private list address is never public', 'private.list@gmail.test' not in json.dumps(r), '')
 
+    # ---- Luganda sign-ups get Luganda answers, emails and SMS ----
+    code, r = call('POST', '/api/subscribe', {'phone': '0703 444555', 'sms': True, 'lang': 'lg'}, admin=False)
+    check('Luganda sign-up is answered in Luganda', code == 200 and 'Webale' in r['message'], r)
+    code, r = call('POST', '/api/subscribe', {'email': 'bad', 'daily': True, 'lang': 'lg'}, admin=False)
+    check('Luganda sign-up errors are in Luganda', code == 422 and 'entuufu' in r.get('error', ''), r)
+    code, r = call('POST', '/api/admin/r/subscribers', {'email': 'nakato@phomi.test', 'name': 'Nakato', 'daily': True, 'weekly': False, 'status': 'active', 'lang': 'lg'})
+    check('admin adds a Luganda reader to the email list', code == 200 and r['item']['lang'] == 'lg', r)
+    code, csv = call('GET', '/api/admin/sms_contacts.csv', raw=True)
+    check('the phone list shows each language', 'language' in csv and '+256703444555' in csv and 'Luganda' in csv, csv[:300])
+
     call('POST', '/api/admin/settings', {'letters_on': '1', 'letters_time': '00:00', 'sms_on': '1'})
     code, L = call('GET', '/api/admin/letters')
     todays = [l for l in L['items'] if l['for_date'] == time.strftime('%Y-%m-%d')]
@@ -349,6 +400,10 @@ try:
     sms = open(os.path.join(tmp, 'sms.log')).read() if os.path.exists(os.path.join(tmp, 'sms.log')) else ''
     check('the daily verse goes out by SMS', '+256772111222' in sms and 'Psalm 23:1-3' in sms, sms[:300])
     check('a "please call me" number gets no SMS it did not ask for', '+256782333444' not in sms, sms[:300])
+    check('Luganda readers get the Luganda verse email', 'Ekyawandiikibwa kya Leero: Zabbuli 23:1-3' in subj and 'To: nakato@phomi.test' in log, [x for x in subj.split('\n') if 'Ekyawandiikibwa' in x][:2])
+    lg_sms = [l for l in sms.split('----') if '+256703444555' in l]
+    check('Luganda readers get the Luganda SMS', lg_sms and 'Ekyawandiikibwa kya Leero' in lg_sms[0] and 'Zabbuli 23' in lg_sms[0], sms[-600:])
+
     code, r = call('GET', '/api/cron/inbox?token=cron-token-123', admin=False)
     check('nobody gets the same email twice', r['letters']['sent'] == 0, r)
     code, r = call('POST', '/api/admin/sms/send', {'phones': '0775 123456'})

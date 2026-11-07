@@ -1,87 +1,85 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useOverlay } from '../components/Overlay.jsx';
-import { Banner, Photo, SectionHead, Tbc } from '../components/ui.jsx';
-import { CLIPS, TIMES } from '../data.js';
-import { PrayerWhen } from '../components/ui.jsx';
+import { Banner, Photo, PrayerWhen, SectionHead, Tbc, useClips } from '../components/ui.jsx';
+import { TIMES } from '../data.js';
 import { useLive } from '../live.jsx';
+import { T, useT } from '../i18n.jsx';
 
-const TABS = [['worship', 'Worship'], ['outreach', 'Outreach'], ['bible-study', 'Bible Study']];
+const TABS = [['worship', 'ministries.tabWorship'], ['outreach', 'ministries.tabOutreach'], ['bible-study', 'ministries.tabStudy']];
 
 function Panel({ tab }) {
   const { open } = useOverlay();
+  const t = useT();
+  const clips = useClips().filter((c) => !c.key.startsWith('v'));
   if (tab === 'outreach')
     return (
       <div className="split panel">
         <div className="stack">
-          <h2 className="h2">Outreach</h2><div className="rule" />
-          <p className="lead">We go out to reach needy people as fully as we are able, carrying the gospel together with practical care: education, feeding, healthcare and accommodation for the vulnerable.</p>
-          <p className="lead"><Tbc>Where outreaches happen, how often, and a short story of one life changed</Tbc></p>
+          <h2 className="h2"><T k="ministries.outreachTitle" /></h2><div className="rule" />
+          <p className="lead"><T k="ministries.outreachText" /></p>
+          <p className="lead"><Tbc><T k="ministries.outreachTbc" /></Tbc></p>
           <div className="btn-row">
-            <Link className="btn btn-navy" to="/contact">Join our outreach</Link>
+            <Link className="btn btn-navy" to="/contact"><T k="ministries.joinOutreach" /></Link>
             <button
               className="btn btn-light"
               type="button"
-              onClick={() => open(CLIPS.map((c) => ({ type: 'video', name: c.v, cap: `${c.t} · ${c.k}` })), CLIPS.findIndex((c) => c.v === 'crusade-ground'))}
+              onClick={() => open(clips.map((c) => c.item), Math.max(0, clips.findIndex((c) => c.key === 'crusade-ground')))}
             >
-              Watch a crusade
+              <T k="ministries.watchCrusade" />
             </button>
           </div>
         </div>
-        <div className="framed"><Photo name="crusade-field" alt="Crowds at an outreach crusade" /></div>
+        <div className="framed"><Photo name="crusade-field" alt={t('ministries.crusadePhoto')} /></div>
       </div>
     );
   if (tab === 'bible-study')
     return (
       <div className="split panel">
         <div className="stack">
-          <h2 className="h2">Bible Study</h2><div className="rule" />
-          <p className="lead">We open the Scriptures together so that men and women know God's word, live by it and teach it to others. Bible study is free and open to everyone, whether you are new to the Bible or have read it for years.</p>
+          <h2 className="h2"><T k="ministries.studyTitle" /></h2><div className="rule" />
+          <p className="lead"><T k="ministries.studyText" /></p>
           <div className="facts">
-            <div><strong>When</strong>{TIMES.bibleStudyDay || <Tbc>Day</Tbc>} · {TIMES.bibleStudyTime || <Tbc>Time</Tbc>}</div>
-            <div><strong>Where</strong>PHOMI, Burweta</div>
-            <div><strong>Who</strong>Everyone is welcome</div>
-            <div><strong>Cost</strong>Free</div>
+            <div><strong><T k="ministries.when" /></strong>{TIMES.bibleStudyDay ? t.days(TIMES.bibleStudyDay) : <Tbc><T k="common.day" /></Tbc>} · {TIMES.bibleStudyTime || <Tbc><T k="common.time" /></Tbc>}</div>
+            <div><strong><T k="ministries.where" /></strong>PHOMI, Burweta</div>
+            <div><strong><T k="ministries.who" /></strong><T k="ministries.whoText" /></div>
+            <div><strong><T k="ministries.cost" /></strong><T k="ministries.free" /></div>
           </div>
-          <div><Link className="btn btn-navy" to="/contact">Join a Bible study</Link></div>
+          <div><Link className="btn btn-navy" to="/contact"><T k="ministries.joinStudy" /></Link></div>
         </div>
-        <div className="framed"><Photo name="class-room" alt="Bible study in session" /></div>
+        <div className="framed"><Photo name="class-room" alt={t('ministries.studyPhoto')} /></div>
       </div>
     );
   return (
     <div className="split panel">
       <div className="stack">
-        <h2 className="h2">Worship</h2><div className="rule" />
-        <p className="lead">Our Sunday gathering is the heart of our church family: praise, prayer and the preaching of God's word, so that people live by it.</p>
-        <p className="lead"><Tbc>Choir, youth, children's ministry, women's and men's fellowships: list the groups PHOMI runs</Tbc></p>
+        <h2 className="h2"><T k="ministries.worshipTitle" /></h2><div className="rule" />
+        <p className="lead"><T k="ministries.worshipText" /></p>
+        <p className="lead"><Tbc><T k="ministries.worshipTbc" /></Tbc></p>
         <div className="times">
-          <span><strong>Sunday Service</strong> · 8:30am – 12:00pm</span>
-          <span><strong>Prayer Time</strong> · <PrayerWhen /> {TIMES.prayerTime}</span>
+          <span><strong><T k="common.sundayService" /></strong> · <T k="ministries.sundayTimes" /></span>
+          <span><strong><T k="common.prayerTime" /></strong> · <PrayerWhen /> {TIMES.prayerTime}</span>
         </div>
       </div>
-      <div className="framed"><Photo name="sunday-pulpit" alt="Preaching at a Sunday service" /></div>
+      <div className="framed"><Photo name="sunday-pulpit" alt={t('ministries.pulpitPhoto')} /></div>
     </div>
   );
 }
 
 export default function Ministries() {
   useLive();
+  const t = useT();
   const [params, setParams] = useSearchParams();
   const tab = TABS.some(([id]) => id === params.get('tab')) ? params.get('tab') : 'worship';
-  const care = [
-    ['Education', 'Helping children and young people stay in school and learn.', 'kids-visit'],
-    ['Feeding', 'Sharing meals and food support with families in need.', 'children'],
-    ['Healthcare', 'Helping the sick and vulnerable reach care and medicine.', null],
-    ['Accommodation', 'Offering shelter to those without a safe place to stay.', null]
-  ];
+  const care = [['ministries.care1', 'kids-visit'], ['ministries.care2', 'children'], ['ministries.care3', null], ['ministries.care4', null]];
   return (
     <>
-      <Banner photo="children" eyebrow="Serving God, serving people" title="Our Ministries" crumb="Ministries" />
+      <Banner photo="children" eyebrow={<T k="ministries.eyebrow" />} title={<T k="ministries.title" />} crumb={<T k="ministries.crumb" />} />
       <section className="sec band">
         <div className="wrap">
-          <div className="tabs" role="tablist" aria-label="Ministries">
-            {TABS.map(([id, label]) => (
+          <div className="tabs" role="tablist" aria-label={t('ministries.crumb')}>
+            {TABS.map(([id, key]) => (
               <button key={id} className="tab" role="tab" id={`tab-${id}`} aria-selected={tab === id} aria-controls="mpanel" onClick={() => setParams({ tab: id }, { replace: true, preventScrollReset: true })}>
-                {label}
+                <T k={key} />
               </button>
             ))}
           </div>
@@ -90,12 +88,12 @@ export default function Ministries() {
       </section>
       <section className="sec band tint">
         <div className="wrap stack" style={{ gap: 36 }}>
-          <SectionHead title="How We Care for the Vulnerable" gold lead="Rooted in James 1:27, our care reaches the whole person." />
+          <SectionHead title={<T k="ministries.careTitle" />} gold lead={<T k="ministries.careLead" />} />
           <div className="care">
-            {care.map(([h, p, ph]) => (
-              <article key={h}>
-                <div className="im">{ph ? <Photo name={ph} /> : <div className="ph" style={{ height: '100%' }}>Photo to add</div>}</div>
-                <div className="bd"><h3>{h}</h3><p>{p} <Tbc>Add details</Tbc></p></div>
+            {care.map(([k, ph]) => (
+              <article key={k}>
+                <div className="im">{ph ? <Photo name={ph} /> : <div className="ph" style={{ height: '100%' }}><T k="ministries.photoToAdd" /></div>}</div>
+                <div className="bd"><h3><T k={k} /></h3><p><T k={`${k}p`} /> <Tbc><T k="common.addDetails" /></Tbc></p></div>
               </article>
             ))}
           </div>
@@ -103,10 +101,10 @@ export default function Ministries() {
       </section>
       <section className="cta-band band">
         <div className="wrap">
-          <h2>Partner with us in the work</h2>
+          <h2><T k="ministries.ctaTitle" /></h2>
           <div className="btn-row">
-            <Link className="btn btn-navy" to="/give">Give</Link>
-            <Link className="btn btn-light" to="/contact">Volunteer</Link>
+            <Link className="btn btn-navy" to="/give"><T k="common.give" /></Link>
+            <Link className="btn btn-light" to="/contact"><T k="ministries.volunteer" /></Link>
           </div>
         </div>
       </section>

@@ -6,8 +6,18 @@ import { useLive } from '../live.jsx';
 import { useOverlay } from '../components/Overlay.jsx';
 import { Banner, CopyButton, Quote, Tbc } from '../components/ui.jsx';
 import { AMOUNTS, BANK, CHURCH, FUNDS, MOMO, fmt } from '../data.js';
+import { T, useT } from '../i18n.jsx';
 
-const METHODS = [['mtn', 'MTN MoMo'], ['airtel', 'Airtel Money'], ['bank', 'Bank transfer'], ['intl', 'International']];
+const METHODS = [['mtn', 'MTN MoMo'], ['airtel', 'Airtel Money'], ['bank', 'give.method.bank'], ['intl', 'give.method.intl']];
+
+// The text for key k with each {name} filled in bold, e.g. Giving <b>UGX 10,000</b> to <b>Tithe</b>
+function Rich({ k, vars, tag: Tag = 'strong' }) {
+  const t = useT();
+  const st = t.style(k);
+  const parts = t(k).split(/\{(\w+)\}/);
+  const out = parts.map((p, i) => (i % 2 ? <Tag key={i}>{vars[p] ?? `{${p}}`}</Tag> : p));
+  return st ? <span style={st}>{out}</span> : <>{out}</>;
+}
 
 const localNumber = (num) => num.replace(/\D/g, '').replace(/^256/, '0');
 const dialCode = (m, n) => (MOMO[m].num ? MOMO[m].path(localNumber(MOMO[m].num)) + n + '#' : MOMO[m].menu);
@@ -31,6 +41,7 @@ function PushPay({ n, err, method, setMethod, fund, fundName, amt, setTouched })
   const [params, setParams] = useSearchParams();
   const timer = useRef();
   const momo = MOMO[method];
+  const t = useT();
 
   const poll = (ref, started = Date.now()) => {
     clearTimeout(timer.current);
@@ -38,10 +49,10 @@ function PushPay({ n, err, method, setMethod, fund, fundName, amt, setTouched })
       try {
         const g = await api('/give/' + encodeURIComponent(ref));
         if (g.status === 'successful') { setGift(g); setStage('done'); return; }
-        if (g.status === 'failed') { setMsg(g.message || 'The payment did not go through.'); setStage('failed'); return; }
+        if (g.status === 'failed') { setMsg(g.message || t('give.failed')); setStage('failed'); return; }
       } catch { /* keep waiting through a dropped connection */ }
       if (Date.now() - started > 4 * 60 * 1000) {
-        setMsg('We did not hear back from the network. If money left your account, send us the transaction ID on WhatsApp.');
+        setMsg(t('give.noAnswer'));
         setStage('failed');
         return;
       }
@@ -66,7 +77,7 @@ function PushPay({ n, err, method, setMethod, fund, fundName, amt, setTouched })
   const start = async () => {
     setTouched(true);
     if (err) { document.getElementById('give-amount')?.focus(); return; }
-    if (!phoneOk(phone)) { setMsg('Enter your Mobile Money number, for example 0772 123456.'); document.getElementById('give-phone')?.focus(); return; }
+    if (!phoneOk(phone)) { setMsg(t('give.badPhone')); document.getElementById('give-phone')?.focus(); return; }
     setMsg('');
     setStage('sending');
     try {
@@ -88,52 +99,53 @@ function PushPay({ n, err, method, setMethod, fund, fundName, amt, setTouched })
     return (
       <div className="paywait" role="status" aria-live="polite">
         <span className="pulse" aria-hidden="true"><Icon name="phone" size={28} /></span>
-        <strong>Check your phone</strong>
-        <span>An {momo.name} prompt has been sent{phone ? ` to ${phone}` : ''}. Enter your PIN to give <b>{amt}</b>. This page updates by itself.</span>
-        {gift?.redirect && <span>If a confirmation page opened, finish there too. <a href={gift.redirect} target="_blank" rel="noopener noreferrer">Open it again</a></span>}
-        <button type="button" className="btn btn-light" onClick={again}>Start again</button>
+        <strong><T k="give.checkPhone" /></strong>
+        <span><Rich k="give.promptSent" tag="b" vars={{ name: momo.name, to: phone ? t('give.promptTo', { phone }) : '', amt }} /></span>
+        {gift?.redirect && <span><T k="give.redirectNote" /> <a href={gift.redirect} target="_blank" rel="noopener noreferrer"><T k="give.openAgain" /></a></span>}
+        <button type="button" className="btn btn-light" onClick={again}><T k="give.startAgain" /></button>
       </div>
     );
   }
   if (stage === 'done') {
     return (
       <div className="status" tabIndex={-1} ref={(el) => el && el.focus()}>
-        <strong style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 18 }}><Icon name="check" size={22} /> Thank you. Your gift has been received.</strong>
-        <span>UGX {fmt(gift?.amount || n)} for {gift?.fund || fundName}. Reference <b>{gift?.ref}</b>. God bless you.</span>
-        <div><button type="button" className="btn btn-light" onClick={again}>Give again</button></div>
+        <strong style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 18 }}><Icon name="check" size={22} /> <T k="give.thanks" /></strong>
+        <span><Rich k="give.thanksDetail" tag="b" vars={{ amount: fmt(gift?.amount || n), fund: gift?.fund || fundName, ref: gift?.ref }} /></span>
+        <div><button type="button" className="btn btn-light" onClick={again}><T k="give.again" /></button></div>
       </div>
     );
   }
   return (
     <>
       <div className="grid-2">
-        <label className="field">Your {momo.name} number
+        <label className="field">{t('give.yourNumber', { name: momo.name })}
           <input id="give-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="0772 123456" value={phone} onChange={onPhone} />
         </label>
-        <label className="field">Your name (optional)
+        <label className="field"><T k="give.yourName" />
           <input id="give-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value.slice(0, 120))} />
         </label>
       </div>
-      {stage === 'failed' && <p className="err" role="alert">{msg || 'The payment did not go through.'} You can try again.</p>}
+      {stage === 'failed' && <p className="err" role="alert">{msg || t('give.failed')} {t('give.tryAgain')}</p>}
       {stage !== 'failed' && msg && <p className="err" role="alert">{msg}</p>}
       <button className="btn btn-gold givebtn" type="button" onClick={start} disabled={stage === 'sending'}>
-        <Icon name="phone" size={20} /> {stage === 'sending' ? 'Sending prompt…' : n && !err ? `Give ${amt} now` : 'Give now'}
+        <Icon name="phone" size={20} /> {stage === 'sending' ? t('give.sendingPrompt') : n && !err ? t('give.nowAmt', { amt }) : t('give.now')}
       </button>
-      <p style={{ margin: 0, color: 'var(--muted)', fontSize: 14, textAlign: 'center' }}>We send a {momo.name} prompt to your phone. You confirm with your PIN. Nobody at the church sees your PIN.</p>
+      <p style={{ margin: 0, color: 'var(--muted)', fontSize: 14, textAlign: 'center' }}>{t('give.pinNote', { name: momo.name })}</p>
     </>
   );
 }
 
 function check(n) {
-  if (!n) return 'Enter the amount you would like to give.';
-  if (n < 500) return 'The smallest gift by Mobile Money is UGX 500.';
-  if (n > 5000000) return 'For gifts above UGX 5,000,000 please use bank transfer.';
+  if (!n) return 'give.errAmount';
+  if (n < 500) return 'give.errMin';
+  if (n > 5000000) return 'give.errMax';
   return '';
 }
 
 export default function Give() {
   const { say } = useOverlay();
   const { payments } = useLive();
+  const t = useT();
   const [raw, setRaw] = useState('10000');
   const [method, setMethod] = useState('mtn');
   const [fund, setFund] = useState('tithe');
@@ -141,8 +153,8 @@ export default function Give() {
 
   const n = parseInt(raw || '0', 10);
   const err = check(n);
-  const amt = n ? `UGX ${fmt(n)}` : 'your gift';
-  const fundName = FUNDS.find((f) => f[0] === fund)[1];
+  const amt = n ? `UGX ${fmt(n)}` : t('give.yourGift');
+  const fundName = t(`give.fund.${fund}`);
   const momo = MOMO[method];
 
   const onAmount = (e) => {
@@ -152,45 +164,45 @@ export default function Give() {
 
   return (
     <>
-      <Banner photo="children-crowd" eyebrow="Partner with us" title="Give">
-        <p className="crumb" style={{ fontSize: 16, maxWidth: 560 }}>Your gift helps us preach the gospel and care for the vulnerable in Butebo District and beyond.</p>
+      <Banner photo="children-crowd" eyebrow={<T k="give.eyebrow" />} title={<T k="give.title" />}>
+        <p className="crumb" style={{ fontSize: 16, maxWidth: 560 }}><T k="give.lead" /></p>
       </Banner>
 
       <section className="band" style={{ paddingBlock: '64px 96px' }}>
         <div className="giftbox">
           <div className="stack" style={{ gap: 6 }}>
-            <h2 className="h2">Make a gift</h2>
-            <p style={{ margin: 0, color: 'var(--muted)' }}>Type any amount or pick one below, then tap Give now on your phone.</p>
+            <h2 className="h2"><T k="give.make" /></h2>
+            <p style={{ margin: 0, color: 'var(--muted)' }}><T k="give.makeHint" /></p>
           </div>
 
           <fieldset>
-            <legend>Give towards</legend>
+            <legend><T k="give.towards" /></legend>
             <div className="opts">
-              {FUNDS.map(([id, l]) => (
-                <button key={id} className="opt" type="button" aria-pressed={fund === id} onClick={() => setFund(id)}>{l}</button>
+              {FUNDS.map(([id]) => (
+                <button key={id} className="opt" type="button" aria-pressed={fund === id} onClick={() => setFund(id)}><T k={`give.fund.${id}`} /></button>
               ))}
             </div>
           </fieldset>
 
           <fieldset>
-            <legend><label htmlFor="give-amount">Amount (UGX)</label></legend>
+            <legend><label htmlFor="give-amount"><T k="give.amount" /></label></legend>
             <div className="amountbox">
               <span aria-hidden="true">UGX</span>
-              <input id="give-amount" type="text" inputMode="numeric" autoComplete="off" placeholder="Enter amount" value={n ? fmt(n) : ''} onChange={onAmount} aria-describedby="give-err" />
+              <input id="give-amount" type="text" inputMode="numeric" autoComplete="off" placeholder={t('give.enterAmount')} value={n ? fmt(n) : ''} onChange={onAmount} aria-describedby="give-err" />
             </div>
             <div className="opts amts">
               {AMOUNTS.map((a) => (
                 <button key={a} className="opt" type="button" aria-pressed={n === a} onClick={() => { setRaw(String(a)); setTouched(true); }}>{fmt(a)}</button>
               ))}
             </div>
-            {touched && err && <p className="err" id="give-err" role="alert">{err}</p>}
+            {touched && err && <p className="err" id="give-err" role="alert">{t(err)}</p>}
           </fieldset>
 
           <fieldset>
-            <legend>How to give</legend>
+            <legend><T k="give.how" /></legend>
             <div className="opts">
               {METHODS.map(([id, l]) => (
-                <button key={id} className="opt" type="button" aria-pressed={method === id} onClick={() => setMethod(id)}>{l}</button>
+                <button key={id} className="opt" type="button" aria-pressed={method === id} onClick={() => setMethod(id)}>{l.startsWith('give.') ? t(l) : l}</button>
               ))}
             </div>
           </fieldset>
@@ -202,11 +214,11 @@ export default function Give() {
           {momo && payments !== 'push' && (
             err ? (
               <button className="btn btn-gold givebtn" type="button" onClick={() => { setTouched(true); document.getElementById('give-amount')?.focus(); }}>
-                <Icon name="phone" size={20} /> Give now
+                <Icon name="phone" size={20} /> <T k="give.now" />
               </button>
             ) : (
-              <a className="btn btn-gold givebtn" href={'tel:' + dialCode(method, n).replace(/#/g, '%23')} onClick={() => say(`Opening ${momo.name}…`)}>
-                <Icon name="phone" size={20} /> Give {amt} now
+              <a className="btn btn-gold givebtn" href={'tel:' + dialCode(method, n).replace(/#/g, '%23')} onClick={() => say(t('give.opening', { name: momo.name }))}>
+                <Icon name="phone" size={20} /> {t('give.nowAmt', { amt })}
               </a>
             )
           )}
@@ -214,43 +226,43 @@ export default function Give() {
           <div className="summary" aria-live="polite">
             {momo && payments === 'push' ? (
               <>
-                <span className="big">Giving <strong>{amt}</strong> to <strong>{fundName}</strong> by <strong>{momo.name}</strong></span>
+                <span className="big"><Rich k="give.giving" vars={{ amt, fund: fundName, method: momo.name }} /></span>
                 <ol className="steps">
-                  <li>Type your {momo.name} number and tap <b>Give now</b>.</li>
-                  <li>A prompt appears on your phone. Check the name shows <b>{momo.reg || "Potter's House Outreach Ministries"}</b>, then enter your PIN.</li>
-                  <li>This page shows <b>Thank you</b> when the gift arrives. You also get an SMS from {momo.name}.</li>
+                  <li>{t('give.pushStep1', { name: momo.name })}</li>
+                  <li><Rich k="give.pushStep2" tag="b" vars={{ reg: momo.reg || "Potter's House Outreach Ministries" }} /></li>
+                  <li>{t('give.pushStep3', { name: momo.name })}</li>
                 </ol>
-                <span className="copyrow">No prompt? On your phone dial <b className="dial">{dialCode(method, n || 0)}</b> <CopyButton text={dialCode(method, n || 0)} label="the dial code">Copy code</CopyButton></span>
+                <span className="copyrow"><T k="give.noPrompt" /> <b className="dial">{dialCode(method, n || 0)}</b> <CopyButton text={dialCode(method, n || 0)} label={t('give.dialCode')}><T k="give.copyCode" /></CopyButton></span>
               </>
             ) : momo ? (
               <>
-                <span className="big">Giving <strong>{amt}</strong> to <strong>{fundName}</strong> by <strong>{momo.name}</strong></span>
+                <span className="big"><Rich k="give.giving" vars={{ amt, fund: fundName, method: momo.name }} /></span>
                 <ol className="steps">
-                  <li>Tap <b>Give now</b> on your phone. Your {momo.name} menu opens{momo.num ? ' with the church number and amount filled in' : ''}.</li>
+                  <li>{t(momo.num ? 'give.ussdStep1Filled' : 'give.ussdStep1', { name: momo.name })}</li>
                   {momo.num ? (
-                    <li>Check the name shows <b>{momo.reg || "Potter's House Outreach Ministries"}</b>, then enter your PIN.</li>
+                    <li><Rich k="give.ussdStep2" tag="b" vars={{ reg: momo.reg || "Potter's House Outreach Ministries" }} /></li>
                   ) : (
-                    <li>Choose <b>Send Money</b>, enter the church number <Tbc>{momo.name} number</Tbc> and <b>{n ? fmt(n) : 'your amount'}</b>, then your PIN.</li>
+                    <li><Rich k="give.ussdStep2Manual" tag="b" vars={{ amt: n ? fmt(n) : t('give.yourAmount') }} /> <Tbc>{t('give.churchNumber', { name: momo.name })}</Tbc></li>
                   )}
-                  <li>Send the transaction ID on WhatsApp so we can thank you and send a receipt.</li>
+                  <li><T k="give.ussdStep3" /></li>
                 </ol>
-                <span className="copyrow">Giving from a computer? On your phone dial <b className="dial">{dialCode(method, n || 0)}</b> <CopyButton text={dialCode(method, n || 0)} label="the dial code">Copy code</CopyButton></span>
-                <span className="copyrow">WhatsApp <b>{CHURCH.whatsapp}</b> <CopyButton text={CHURCH.whatsapp.replace(/\s/g, '')} label="WhatsApp number" /></span>
+                <span className="copyrow"><T k="give.fromComputer" /> <b className="dial">{dialCode(method, n || 0)}</b> <CopyButton text={dialCode(method, n || 0)} label={t('give.dialCode')}><T k="give.copyCode" /></CopyButton></span>
+                <span className="copyrow">WhatsApp <b>{CHURCH.whatsapp}</b> <CopyButton text={CHURCH.whatsapp.replace(/\s/g, '')} label={t('give.waNumber')} /></span>
               </>
             ) : method === 'bank' ? (
               <>
-                <span className="big">Giving <strong>{amt}</strong> to <strong>{fundName}</strong> by <strong>bank transfer</strong></span>
-                <span><strong>Bank:</strong> {BANK.bank || <Tbc>Bank name, branch</Tbc>}</span>
-                <span><strong>Account name:</strong> {BANK.accountName}</span>
-                <span><strong>Account number:</strong> {BANK.accountNumber || <Tbc>Account number</Tbc>}</span>
-                <span>Use <b>{fundName}</b> as the reference, then send the slip on WhatsApp ({CHURCH.whatsapp}).</span>
+                <span className="big"><Rich k="give.giving" vars={{ amt, fund: fundName, method: t('give.bankTransfer') }} /></span>
+                <span><strong><T k="give.bank" /></strong> {BANK.bank || <Tbc><T k="give.bankTbc" /></Tbc>}</span>
+                <span><strong><T k="give.accName" /></strong> {BANK.accountName}</span>
+                <span><strong><T k="give.accNumber" /></strong> {BANK.accountNumber || <Tbc><T k="give.accTbc" /></Tbc>}</span>
+                <span><Rich k="give.bankRef" tag="b" vars={{ fund: fundName, number: CHURCH.whatsapp }} /></span>
               </>
             ) : (
               <>
-                <span className="big">Giving <strong>{amt}</strong> to <strong>{fundName}</strong> from outside Uganda</span>
-                <span>Use <Tbc>online giving link / SWIFT details / partner organisation</Tbc>.</span>
-                <span><strong>SWIFT / BIC:</strong> {BANK.swift || <Tbc>Code</Tbc>}</span>
-                <span className="copyrow">To sponsor a child's schooling, email <b className="email">{CHURCH.email}</b> <CopyButton text={CHURCH.email} label="email address" /></span>
+                <span className="big"><Rich k="give.givingIntl" vars={{ amt, fund: fundName }} /></span>
+                <span><T k="give.intlUse" /> <Tbc><T k="give.intlTbc" /></Tbc>.</span>
+                <span><strong><T k="give.swift" /></strong> {BANK.swift || <Tbc><T k="give.code" /></Tbc>}</span>
+                <span className="copyrow"><T k="give.sponsor" /> <b className="email">{CHURCH.email}</b> <CopyButton text={CHURCH.email} label={t('give.emailAddr')} /></span>
               </>
             )}
           </div>
@@ -259,17 +271,13 @@ export default function Give() {
 
       <section className="band" style={{ paddingBlock: '0 96px' }}>
         <div className="wrap funds">
-          <div className="fund"><h2>Church &amp; Worship</h2><p>Tithes and offerings that sustain Sunday services, prayer and the life of the church.</p></div>
-          <div className="fund"><h2>Outreach &amp; Care</h2><p>Education, feeding, healthcare and accommodation for vulnerable people.</p></div>
-          <div className="fund"><h2>Bible Study</h2><p>Bible study at PHOMI is free for everyone. Your gifts provide Bibles, materials and teaching so more people can study God's word.</p></div>
+          <div className="fund"><h2><T k="give.fundChurch" /></h2><p><T k="give.fundChurchText" /></p></div>
+          <div className="fund"><h2><T k="give.fundOutreach" /></h2><p><T k="give.fundOutreachText" /></p></div>
+          <div className="fund"><h2><T k="give.fundStudy" /></h2><p><T k="give.fundStudyText" /></p></div>
         </div>
       </section>
 
-      <Quote
-        photo="celebration"
-        text="Every man according as he purposeth in his heart, so let him give; not grudgingly, or of necessity: for God loveth a cheerful giver."
-        cite="2 Corinthians 9:7"
-      />
+      <Quote photo="celebration" text={<T k="give.quote" />} cite={<T k="give.quoteCite" />} />
     </>
   );
 }

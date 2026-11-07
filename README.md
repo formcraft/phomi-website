@@ -9,7 +9,8 @@ It lives at **https://pottershouseoutreachministriesinternational.com** and is h
 - **Automatic updates:** approved people email the church update address with a tag such as `Sermon:` or `Photo: Outreach`. An admin approves each one (in the admin page or with a one-tap link) before it shows on the site.
 - **Videos:** YouTube, TikTok and Facebook links play right on the page; uploaded MP4 clips work too.
 - **No AI at runtime:** everything runs on plain PHP scripts and rules. Nothing needs an AI service or an API key to work.
-- **Bible:** the whole Bible (KJV and World English Bible, both public domain) at `/bible`, with search, a Verse of the Day and a Verse of the Week from a planned list (never random), share pictures, and *Send to a number* by SMS or WhatsApp from the reader's own phone.
+- **English and Luganda:** every page in both languages, with a language button in the menu bar on every page. The choice is remembered, and `?lang=lg` opens a link in Luganda. All text lives in `src/text.js`; the church can change any of it in **Admin → Site text & language**, with font, size, colour, bold and italic, plus the whole-site fonts, colours and text size.
+- **Bible:** the whole Bible (KJV and World English Bible, both public domain, and the Luganda *Bayibuli Entukuvu* from Biblica, CC BY-SA 4.0) at `/bible`, with search, a Verse of the Day and a Verse of the Week from a planned list (never random), share pictures, and *Send to a number* by SMS or WhatsApp from the reader's own phone.
 - **Verse emails and SMS:** members sign up for a morning verse email, a Monday letter (Verse of the Week, latest sermon, coming events) and an optional SMS. Sent by the cron job; an admin can pause, approve or add a message to each one.
 - **Giving:** the giver types their MTN or Airtel number and gets the Mobile Money PIN prompt on their phone (Yo! Payments or Flutterwave). Until a payment account is live, the page falls back to the dial code.
 
@@ -52,7 +53,9 @@ If the backend can't be reached, the site still works with the built-in content 
 | --- | --- |
 | Sermons, videos, gallery photos, events, announcements, testimonies | **Admin page**, or email the update address |
 | Undo a change (edit, delete, approval, settings) | **Admin → History & undo** |
-| YouTube channel, TikTok, Facebook, Instagram links | **Admin → Settings → Video and social pages** |
+| Facebook, YouTube, TikTok, Instagram and WhatsApp links | **Admin → Social links** (they open in a new tab) |
+| Any wording on the site, in English or Luganda, and its font, size and colour | **Admin → Site text & language** (built-in text: `src/text.js`) |
+| The language a first-time visitor sees | **Admin → Site text & language** |
 | Service times, phone numbers, WhatsApp, Mobile Money and bank details | **Admin → Settings** (overrides `src/data.js`) |
 | Verse of the Day / Week for a date | **Admin → Daily verses** (otherwise the built-in list in `api/lib/bible.php`) |
 | Verse emails and SMS: on/off, send time, approval | **Admin → Settings → Bible, verse emails and SMS**; each letter in **Admin → Verse emails & SMS** |

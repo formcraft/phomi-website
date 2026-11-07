@@ -14,6 +14,7 @@ import Give from './pages/Give.jsx';
 import Contact from './pages/Contact.jsx';
 import { pageMeta } from './seo.js';
 import { setHead } from './head.js';
+import { T } from './i18n.jsx';
 
 const Admin = lazy(() => import('./admin/Admin.jsx'));
 
@@ -28,13 +29,32 @@ function Title() {
   return null;
 }
 
+// Every link to another website opens in a new tab, so visitors keep the church site open.
+// The links on the site already say so; this also catches links typed into content later.
+function OffsiteLinks() {
+  useEffect(() => {
+    const onClick = (e) => {
+      const a = e.target.closest?.('a[href]');
+      if (!a || a.target) return;
+      let u;
+      try { u = new URL(a.href, window.location.href); } catch { return; }
+      if (!/^https?:$/.test(u.protocol) || u.host === window.location.host) return;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, []);
+  return null;
+}
+
 function NotFound() {
   return (
     <section className="sec band">
       <div className="wrap stack center">
-        <h1 className="h2">Page not found</h1>
-        <p className="lead">The page you were looking for has moved or no longer exists.</p>
-        <Link className="btn btn-navy" to="/">Go to the home page</Link>
+        <h1 className="h2"><T k="common.notFound" /></h1>
+        <p className="lead"><T k="common.notFoundText" /></p>
+        <Link className="btn btn-navy" to="/"><T k="common.goHome" /></Link>
       </div>
     </section>
   );
@@ -44,6 +64,7 @@ export default function App() {
   return (
     <OverlayProvider>
       <Title />
+      <OffsiteLinks />
       <Routes>
         <Route path="admin/*" element={<Suspense fallback={<p style={{ padding: 32 }}>Loading…</p>}><Admin /></Suspense>} />
         <Route element={<Layout />}>

@@ -57,6 +57,7 @@ function resources(): array
                 'name' => ['type' => 'text', 'max' => 120, 'label' => 'Name'],
                 'daily' => ['type' => 'bool', 'default' => '1', 'label' => 'Verse of the Day every morning'],
                 'weekly' => ['type' => 'bool', 'default' => '1', 'label' => 'Weekly letter on Monday'],
+                'lang' => ['type' => 'select', 'options' => ['en', 'lg'], 'default' => 'en', 'label' => 'Language (en = English, lg = Luganda)'],
                 'status' => ['type' => 'select', 'options' => ['active', 'pending', 'unsubscribed'], 'default' => 'active', 'label' => 'Status'],
             ],
         ],
@@ -68,6 +69,7 @@ function resources(): array
                 'name' => ['type' => 'text', 'max' => 120, 'label' => 'Name'],
                 'daily' => ['type' => 'bool', 'default' => '1', 'label' => 'Verse of the Day by SMS'],
                 'call_me' => ['type' => 'bool', 'default' => '0', 'label' => 'Asked for a call from the church'],
+                'lang' => ['type' => 'select', 'options' => ['en', 'lg'], 'default' => 'en', 'label' => 'Language (en = English, lg = Luganda)'],
                 'status' => ['type' => 'select', 'options' => ['active', 'stopped'], 'default' => 'active', 'label' => 'Status'],
             ],
         ],
@@ -346,5 +348,7 @@ function public_content(): array
         'testimonies' => $testimonies,
         'payments' => payment_provider() ? 'push' : 'ussd',
         'verse' => ['day' => verse_for($today, 'day'), 'week' => verse_for($today, 'week')],
+        'text' => site_text_all() ?: new stdClass(),
+        'verse_lg' => ['day' => verse_for($today, 'day', 'lug'), 'week' => verse_for($today, 'week', 'lug')],
     ];
 }

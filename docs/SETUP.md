@@ -29,7 +29,7 @@ Create `phomi-config.php` one folder above `public_html` (File Manager), using [
 
 ## 4. First run
 
-1. Open `https://pottershouseoutreachministriesinternational.com/api/install.php?token=<install_token>`. Every check should show ✅. Create the first admin account.
+1. Open `https://pottershouseoutreachministriesinternational.com/api/install.php?token=<install_token>`. Every check should show ✅. Create the first admin account with the email **formcraftinc@gmail.com** and a password you choose (10 or more characters, starting with "Potters"). Type it only into the installer; you can change it later in **Admin → Account**.
 2. Sign in at `/admin`.
 3. **Settings → Update mailbox**: enter the update address and its password, then press *Save and test the mailbox*.
 4. **Approved senders**: add everyone allowed to email updates.
@@ -56,11 +56,11 @@ Test with UGX 500 on MTN and on Airtel, then check **Admin → Giving**.
 
 ## 7. Videos
 
-Post sermons and clips to the church's **YouTube** channel or **TikTok**, then add the link in **Admin → Videos** (or email it with the subject `Video:`). The video plays right on the Sermons and Home pages. Put the channel links in **Admin → Settings → Video and social pages** so they show in the footer. TikTok share links (`vm.tiktok.com/…`) are turned into the full address when saved; if that fails, the site shows a *Watch on TikTok* button instead.
+Post sermons and clips to the church's **YouTube** channel or **TikTok**, then add the link in **Admin → Videos** (or email it with the subject `Video:`). The video plays right on the Sermons and Home pages. Put the channel links in **Admin → Social links** so they show in the footer (they open in a new tab). TikTok share links (`vm.tiktok.com/…`) are turned into the full address when saved; if that fails, the site shows a *Watch on TikTok* button instead.
 
 ## 8. Bible, verse emails and SMS
 
-- The installer loads the Bible text (KJV and WEB) from `api/data/`. If it did not, press *Load the Bible text* in **Admin → Daily verses**. The installer check list needs the **FreeType** (part of GD) and **zlib** extensions for the verse pictures.
+- The installer loads the Bible text (KJV, WEB and the Luganda *Bayibuli Entukuvu*) from `api/data/`. Visitors who choose Luganda read the Luganda Bible, and people who sign up in Luganda get their verse emails and SMS in Luganda. If it did not, press *Load the Bible text* in **Admin → Daily verses**. The installer check list needs the **FreeType** (part of GD) and **zlib** extensions for the verse pictures.
 - **Verse of the Day and Week** come from a planned list, never at random. To choose a verse for a date, use *Change* in **Admin → Daily verses**. Days with nothing planned use the built-in list of 252 verses grouped by theme, and 52 weekly verses.
 - **Verse emails are off** until you switch on *Send verse emails* in **Admin → Settings → Bible, verse emails and SMS**. Set the send time (default 06:00). With *Send as planned*, each letter goes out by itself and can be paused first; with *Wait for approval*, nothing is sent until someone presses *Approve* in **Admin → Verse emails & SMS**.
 - New sign-ups get a confirm email first (double opt-in). Every email has an unsubscribe link and the one-click unsubscribe header Gmail and Outlook use.
@@ -100,3 +100,9 @@ To change a page's title or description, edit `src/seo.js`. [GO-LIVE-WITH-CLAUDE
 | Verse emails not going out | Check *Send verse emails* is on in Settings, the cron job runs, and the letter is not *paused* or *waiting for approval* in Admin → Verse emails & SMS |
 | SMS shows "failed" | Check the Africa's Talking credit, the username and key, and that the sender ID is approved |
 | Replies from the website go to spam | Make sure SPF/DKIM are on for the domain (hPanel → Emails → DNS settings) |
+
+## Languages and site text
+
+- The **Luganda / English** button is in the menu bar on every page (next to the menu button on phones). A visitor's choice is remembered on their phone. A link ending in `?lang=lg` opens the site in Luganda.
+- **Admin → Site text & language** holds every piece of wording on the site in English and Luganda. Search for any words, type the new wording, and choose a font, size, colour, bold or italic for it. *Use the built-in wording* puts it back, and **Admin → History & undo** keeps every change. The same page sets the whole-site fonts, main colours and text size, and the first language a new visitor sees.
+- Ask a pastor or member who speaks Luganda well to read the Luganda wording once, and fix anything there.

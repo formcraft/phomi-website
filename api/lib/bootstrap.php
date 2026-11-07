@@ -51,3 +51,4 @@ require __DIR__ . '/bible.php';
 require __DIR__ . '/letters.php';
 require __DIR__ . '/sms.php';
 require __DIR__ . '/lists.php';
+require __DIR__ . '/sitetext.php';

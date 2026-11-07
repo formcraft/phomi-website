@@ -4,6 +4,7 @@ import Icon from '../components/Icon.jsx';
 import Seal from '../components/Seal.jsx';
 import { api } from '../api.js';
 import { fmt } from '../data.js';
+import SiteText from './SiteText.jsx';
 import './admin.css';
 
 // Church admin page: content, the update mailbox, giving, messages and settings.
@@ -24,6 +25,8 @@ const SECTIONS = [
   ['gifts', 'Giving', 'gift'],
   ['messages', 'Prayer & messages', 'chat'],
   ['senders', 'Approved senders', 'users'],
+  ['social', 'Social links', 'facebook'],
+  ['text', 'Site text & language', 'globe'],
   ['history', 'History & undo', 'refresh'],
   ['settings', 'Settings', 'cog'],
   ['account', 'Account', 'out']
@@ -517,22 +520,15 @@ const SETTING_GROUPS = [
     ['email', 'Public email address', 'email', 'church@pottershouseoutreachministriesinternational.com']
   ]],
   ['Bible, verse emails and SMS', 'The Verse of the Day comes from Daily verses. Emails go to the Email list; SMS go to the Phone list.', [
-    ['bible_default', 'Bible translation shown first', 'select:kjv=King James Version (KJV)|web=World English Bible (WEB)', ''],
+    ['bible_default', 'Bible translation shown first (Luganda visitors start in the Luganda Bible)', 'select:kjv=King James Version (KJV)|web=World English Bible (WEB)|lug=Bayibuli Entukuvu (Luganda)', ''],
     ['letters_on', 'Send the verse emails', 'select:0=Off|1=On', ''],
     ['letters_mode', 'Before each email goes out', 'select:auto=Send as planned (you can pause any email)|approve=Wait for an admin to approve each one', ''],
     ['letters_time', 'Send at (Uganda time, 24-hour)', 'text', '06:00'],
-    ['sms_on', 'Send the daily verse by SMS (needs an SMS account)', 'select:0=Off|1=On', ''],
-    ['whatsapp_channel', 'Church WhatsApp Channel link', 'url', 'https://whatsapp.com/channel/…']
+    ['sms_on', 'Send the daily verse by SMS (needs an SMS account)', 'select:0=Off|1=On', '']
   ]],
   ['Lists and sign-ups', 'A private email address (not the website mailbox) that gets each new sign-up and a weekly copy of the email and phone lists. Only admins see it.', [
     ['lists_email', 'Private list address', 'email', 'pastor.private@gmail.com'],
     ['lists_weekly', 'Email both lists there every Monday', 'select:1=Yes|0=No', '']
-  ]],
-  ['Video and social pages', 'Links to the church pages. They show in the footer and on the Sermons page.', [
-    ['youtube', 'YouTube channel', 'url', 'https://www.youtube.com/@yourchurch'],
-    ['tiktok', 'TikTok page', 'url', 'https://www.tiktok.com/@yourchurch'],
-    ['facebook', 'Facebook page', 'url', 'https://www.facebook.com/…'],
-    ['instagram', 'Instagram', 'url', 'https://www.instagram.com/…']
   ]],
   ['Giving details', 'The registered Mobile Money names let givers check they are paying the church.', [
     ['momo_mtn_number', 'MTN MoMo number', 'text', '0772 000000'],
@@ -545,7 +541,19 @@ const SETTING_GROUPS = [
   ]]
 ];
 
-function Settings() {
+// Admin → Social links: its own page so the church can find it quickly
+const SOCIAL_GROUPS = [
+  ['Social links', 'Paste the full link to each church page. A link shows as an icon in the footer of every page, and Facebook, YouTube and TikTok also show on the Sermons page. Leave a box empty to hide that icon.', [
+    ['facebook', 'Facebook page', 'url', 'https://www.facebook.com/…'],
+    ['youtube', 'YouTube channel', 'url', 'https://www.youtube.com/@yourchurch'],
+    ['tiktok', 'TikTok page', 'url', 'https://www.tiktok.com/@yourchurch'],
+    ['instagram', 'Instagram', 'url', 'https://www.instagram.com/…'],
+    ['whatsapp', 'WhatsApp number (for the chat button)', 'text', '+256 775 672 762'],
+    ['whatsapp_channel', 'WhatsApp Channel link', 'url', 'https://whatsapp.com/channel/…']
+  ]]
+];
+
+function Settings({ groups = SETTING_GROUPS, title = 'Settings' }) {
   const [s, setS] = useState(null);
   const [info, setInfo] = useState(null);
   const [busy, setBusy] = useState('');
@@ -580,11 +588,11 @@ function Settings() {
   };
   return (
     <form onSubmit={save}>
-      <div className="adm-head"><h1>Settings</h1><button className="adm-btn primary" disabled={!!busy}>{busy === 'save' ? 'Saving…' : 'Save'}</button></div>
+      <div className="adm-head"><h1>{title}</h1><button className="adm-btn primary" disabled={!!busy}>{busy === 'save' ? 'Saving…' : 'Save'}</button></div>
       {info && <Note kind={info.kind}>{info.text}</Note>}
-      {SETTING_GROUPS.map(([title, help, fields]) => (
-        <section className="adm-card" key={title}>
-          <h2>{title}</h2>
+      {groups.map(([gt, help, fields]) => (
+        <section className="adm-card" key={gt}>
+          <h2>{gt}</h2>
           <p className="adm-muted">{help}</p>
           <div className="adm-grid">
             {fields.map(([k, label, type, ph]) => {
@@ -599,7 +607,7 @@ function Settings() {
               );
             })}
           </div>
-          {title === 'Update mailbox' && <button type="button" className="adm-btn" onClick={test} disabled={!!busy}>{busy === 'test' ? 'Connecting…' : 'Save and test the mailbox'}</button>}
+          {gt === 'Update mailbox' && <button type="button" className="adm-btn" onClick={test} disabled={!!busy}>{busy === 'test' ? 'Connecting…' : 'Save and test the mailbox'}</button>}
         </section>
       ))}
     </form>
@@ -985,7 +993,9 @@ export default function Admin() {
   else if (current === 'gifts') body = <Gifts />;
   else if (current === 'messages') body = <Messages />;
   else if (current === 'settings') body = <Settings />;
+  else if (current === 'social') body = <Settings key="social" groups={SOCIAL_GROUPS} title="Social links" />;
   else if (current === 'history') body = <History />;
+  else if (current === 'text') body = <SiteText />;
   else if (current === 'verses') body = <Verses schema={schema} />;
   else if (current === 'letters') body = <Letters />;
   else if (current === 'account') body = <Account admin={admin} onOut={() => setAdmin(null)} />;

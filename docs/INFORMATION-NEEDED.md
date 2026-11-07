@@ -77,6 +77,15 @@ No AI service or API key is needed anywhere. The site runs on plain scripts.
 | 5b.6 | The **private email address** that should receive new sign-ups and the lists every Monday (not the website mailbox) | Admin → Settings → Lists and sign-ups |
 | 5b.5 | Hostinger's **emails-per-hour limit** for the plan, so the verse emails stay under it | `phomi-config.php` → letters_per_hour |
 
+## 5c. Luganda
+
+| # | What | Notes |
+|---|------|-------|
+| 5c.1 | **Who reads the Luganda wording** before launch: a pastor or member who speaks Luganda well. The Luganda on the site has not yet been checked by a native speaker | They fix any wording themselves in Admin → Site text & language (search for the words) |
+| 5c.2 | The **first language** for a new visitor: English or Luganda | Admin → Site text & language |
+| 5c.3 | Do we also want **Lugwere or Ateso** (the main languages around Butebo)? The site is built so another language can be added later | Tell Claude Code; it is a code change |
+| 5c.4 | The Luganda Bible is Biblica's *Bayibuli Entukuvu* (CC BY-SA 4.0). It is free to use as long as the credit stays under each chapter. Nothing to do, just keep it | Credit is shown automatically |
+
 ## 6. GitHub (automatic deploys)
 
 | # | What | Notes |
@@ -94,7 +103,7 @@ No AI service or API key is needed anywhere. The site runs on plain scripts.
 | 7.4 | The correct **WhatsApp number**. The old site shows two different numbers: +256 775 672 762 and +256 775 672 562 | Admin → Settings → Contact details |
 | 7.5 | Confirm the **village spelling**: Burweta (used now) or Bureta | Site text |
 | 7.6 | **Directions**: distance from Mbale town and a landmark, and a Google Maps pin of the church | Contact page |
-| 7.7 | **Instagram** link, if any | Admin → Settings → Video and social pages |
+| 7.7 | **Facebook, YouTube, TikTok, Instagram** and **WhatsApp Channel** links | Admin → Social links |
 | 7.8 | The first few **sermons**: title, preacher, date, scripture, and audio/video or a YouTube, TikTok or Facebook link | Email them with "Sermon:" or add them in Admin → Sermons |
 | 7.9 | Upcoming **events** with dates | Email with "Event:" or Admin → Events |
 | 7.10 | **Testimonies**, with each person's permission to publish | Admin → Testimonies |

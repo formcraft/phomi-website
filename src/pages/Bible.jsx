@@ -1,23 +1,30 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Banner } from '../components/ui.jsx';
 import { SendTo, Subscribe, VerseCard } from '../components/Verse.jsx';
 import { useOverlay } from '../components/Overlay.jsx';
 import { api } from '../api.js';
-import { BOOKS, TRANSLATIONS } from '../bible-books.js';
+import { BOOKS, BOOKS_LG, TRANSLATIONS } from '../bible-books.js';
 import { useLive } from '../live.jsx';
 import { setHead } from '../head.js';
+import { T, useT } from '../i18n.jsx';
+
+const trTag = (k) => (k === 'lug' ? 'Luganda' : String(k || 'kjv').toUpperCase());
 
 const KEY = 'phomi-bible';
 const remember = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } };
 const save = (v) => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch { /* private mode */ } };
 
 export default function Bible() {
-  const { verse } = useLive();
+  const { verse: verseEn, verse_lg: verseLg } = useLive();
+  const t = useT();
+  const lg = t.lang === 'lg';
+  const verse = lg && verseLg?.day?.text ? verseLg : verseEn;
   const { copy } = useOverlay();
   const [params, setParams] = useSearchParams();
   const last = useMemo(remember, []);
-  const [tr, setTr] = useState(params.get('tr') || last.tr || '');
+  // Luganda readers start in the Luganda Bible; a link or their last choice wins
+  const [tr, setTr] = useState(params.get('tr') || last.tr || (lg ? 'lug' : ''));
   const [book, setBook] = useState(Number(last.book) || 43);
   const [ch, setCh] = useState(Number(last.ch) || 1);
   const [data, setData] = useState(null);
@@ -49,7 +56,7 @@ export default function Bible() {
         setFound(r);
       }
     } catch (x) {
-      setErr(x.status === 404 ? 'The Bible is not available until the website server is set up.' : x.message);
+      setErr(x.status === 404 ? t('common.offlineBible') : x.message);
     } finally {
       setBusy(false);
     }
@@ -76,11 +83,20 @@ export default function Bible() {
       setPicked(null);
       save({ book: b, ch: c, tr: r.translation });
     } catch (x) {
-      setErr(x.status === 404 && !x.data?.error ? 'The Bible is not available until the website server is set up.' : x.message);
+      setErr(x.status === 404 && !x.data?.error ? t('common.offlineBible') : x.message);
     } finally {
       setBusy(false);
     }
   };
+
+  // Switching the site language moves the reader to the Bible in that language, at the same chapter
+  const firstLang = useRef(true);
+  useEffect(() => {
+    if (firstLang.current) { firstLang.current = false; return; }
+    if (lg && tr !== 'lug') load(book, ch, 'lug');
+    if (!lg && tr === 'lug') load(book, ch, 'kjv');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lg]);
 
   const step = (d) => {
     let b = book;
@@ -91,26 +107,29 @@ export default function Bible() {
     window.scrollTo({ top: document.getElementById('reader')?.offsetTop - 80, behavior: 'smooth' });
   };
 
+  const bookName = (d) => (d.translation === 'lug' && d.name_lg ? d.name_lg : d.name === 'Psalms' ? 'Psalm' : d.name);
   const pick = (v) => {
-    const name = data.name === 'Psalms' ? 'Psalm' : data.name;
+    const name = bookName(data);
     const ref = data.chapters === 1 ? `${name} ${v.v}` : `${name} ${data.chapter}:${v.v}`;
     setMark([v.v]);
     setPicked({ ref, text: v.t, translation: data.translation, verses: [v] });
     setParams({ ref, tr: data.translation }, { replace: true });
   };
 
-  const chapterName = data ? `${data.name === 'Psalms' ? 'Psalm' : data.name} ${data.chapter}` : '';
+  const chapterName = data ? `${bookName(data)} ${data.chapter}` : '';
+  const share = picked ? `“${picked.text}”\n${picked.ref} (${trTag(picked.translation)})` : '';
+  const link = picked ? `${window.location.origin}/bible?ref=${encodeURIComponent(picked.ref)}${picked.translation !== 'kjv' ? `&tr=${picked.translation}` : ''}` : '';
   useEffect(() => {
     const ref = picked?.ref || chapterName;
     setHead({
       path: '/bible',
-      title: ref ? `${ref} (${(picked?.translation || data?.translation || 'kjv').toUpperCase()}) | Read the Bible | PHOMI` : undefined,
+      title: ref ? `${ref} (${trTag(picked?.translation || data?.translation)}) | ${t('bible.title')} | PHOMI` : undefined,
       description: picked ? `“${picked.text.length > 130 ? picked.text.slice(0, 130) + '…' : picked.text}” ${picked.ref}. Read the whole Bible free at Potter's House.` : undefined,
     });
-  }, [picked, chapterName, data]);
+  }, [picked, chapterName, data, t]);
   return (
     <>
-      <Banner photo="class-room" eyebrow="The Word of God" title="The Bible" crumb="Bible" />
+      <Banner photo="class-room" eyebrow={<T k="bible.eyebrow" />} title={<T k="bible.title" />} crumb={<T k="bible.crumb" />} />
       {verse?.day?.text && (
         <section className="sec band tint" style={{ paddingBlock: 56 }}>
           <div className="wrap verse-pair">
@@ -122,24 +141,24 @@ export default function Bible() {
       <section className="sec band" id="reader">
         <div className="wrap bible">
           <form className="bible-find" onSubmit={(e) => { e.preventDefault(); go(q); }}>
-            <label className="field grow">Find a verse or search words
-              <input type="search" id="bible-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="John 3:16, Psalm 23, or words like “living water”" />
+            <label className="field grow"><T k="bible.find" />
+              <input type="search" id="bible-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('bible.findHint')} />
             </label>
-            <button className="btn btn-gold" disabled={busy}>Find</button>
+            <button className="btn btn-gold" disabled={busy}><T k="bible.findBtn" /></button>
           </form>
           <div className="bible-nav">
-            <label className="field">Book
+            <label className="field"><T k="bible.book" />
               <select id="bible-book" value={book} onChange={(e) => load(Number(e.target.value), 1)}>
-                <optgroup label="Old Testament">{BOOKS.slice(0, 39).map(([n], i) => <option key={n} value={i + 1}>{n}</option>)}</optgroup>
-                <optgroup label="New Testament">{BOOKS.slice(39).map(([n], i) => <option key={n} value={i + 40}>{n}</option>)}</optgroup>
+                <optgroup label={t('bible.oldT')}>{BOOKS.slice(0, 39).map(([n], i) => <option key={n} value={i + 1}>{tr === 'lug' ? BOOKS_LG[i] : n}</option>)}</optgroup>
+                <optgroup label={t('bible.newT')}>{BOOKS.slice(39).map(([n], i) => <option key={n} value={i + 40}>{tr === 'lug' ? BOOKS_LG[i + 39] : n}</option>)}</optgroup>
               </select>
             </label>
-            <label className="field">Chapter
+            <label className="field"><T k="bible.chapter" />
               <select id="bible-ch" value={ch} onChange={(e) => load(book, Number(e.target.value))}>
                 {Array.from({ length: BOOKS[book - 1][1] }, (_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
               </select>
             </label>
-            <label className="field">Translation
+            <label className="field"><T k="bible.translation" />
               <select id="bible-tr" value={tr || 'kjv'} onChange={(e) => (picked && mark.length ? go(picked.ref, e.target.value) : load(book, ch, e.target.value))}>
                 {Object.entries(TRANSLATIONS).map(([k, n]) => <option key={k} value={k}>{n}</option>)}
               </select>
@@ -149,13 +168,13 @@ export default function Bible() {
 
           {found && (
             <div className="bible-results">
-              <h2 className="h3">{found.total ? `${found.total} verse${found.total === 1 ? '' : 's'} found` : 'Nothing found'}{found.total > found.results.length ? `, showing the first ${found.results.length}` : ''}</h2>
+              <h2 className="h3">{found.total ? (found.total === 1 ? t('bible.foundOne') : t('bible.found', { n: found.total })) : t('bible.foundNone')}{found.total > found.results.length ? t('bible.showingFirst', { n: found.results.length }) : ''}</h2>
               <ol>
                 {found.results.map((r) => (
                   <li key={r.ref}><button type="button" className="linkbtn" onClick={() => { setQ(r.ref); go(r.ref); }}>{r.ref}</button> {r.t}</li>
                 ))}
               </ol>
-              <button type="button" className="linkbtn" onClick={() => setFound(null)}>Back to {chapterName}</button>
+              <button type="button" className="linkbtn" onClick={() => setFound(null)}>{t('bible.backTo', { name: chapterName })}</button>
             </div>
           )}
 
@@ -165,7 +184,7 @@ export default function Bible() {
                 <h2 className="h2">{chapterName}</h2>
                 <p>{TRANSLATIONS[data.translation]}</p>
               </header>
-              <p className="hint">Tap a verse to share it.</p>
+              <p className="hint"><T k="bible.tapHint" /></p>
               <div className="verses">
                 {data.verses.map((v) => (
                   <span key={v.v} id={`v${v.v}`} className={mark.includes(v.v) ? 'vs on' : 'vs'} onClick={() => pick(v)} role="button" tabIndex={0}
@@ -175,22 +194,23 @@ export default function Bible() {
                 ))}
               </div>
               <div className="chapter-steps">
-                <button type="button" className="btn btn-light" onClick={() => step(-1)} disabled={book === 1 && ch === 1}>Previous chapter</button>
-                <button type="button" className="btn btn-light" onClick={() => step(1)} disabled={book === 66 && ch === 22}>Next chapter</button>
+                <button type="button" className="btn btn-light" onClick={() => step(-1)} disabled={book === 1 && ch === 1}><T k="bible.prev" /></button>
+                <button type="button" className="btn btn-light" onClick={() => step(1)} disabled={book === 66 && ch === 22}><T k="bible.next" /></button>
               </div>
+              {data.credit && <p className="credit small">{data.credit}</p>}
             </article>
           )}
         </div>
       </section>
       {picked && (
-        <div className="verse-bar band" role="region" aria-label="Selected verse">
+        <div className="verse-bar band" role="region" aria-label={t('bible.selected')}>
           <div className="wrap">
             <p><b>{picked.ref}</b> {picked.text.length > 140 ? picked.text.slice(0, 140) + '…' : picked.text}</p>
             <div className="verse-acts">
-              <a className="btn btn-gold" href={`https://wa.me/?text=${encodeURIComponent(`“${picked.text}”\n${picked.ref} (${picked.translation.toUpperCase()})\n\n${window.location.origin}/bible?ref=${encodeURIComponent(picked.ref)}`)}`} target="_blank" rel="noopener noreferrer">Share on WhatsApp</a>
-              <button type="button" className="linkbtn light" onClick={() => copy(`“${picked.text}”\n${picked.ref} (${picked.translation.toUpperCase()})`, picked.ref)}>Copy</button>
-              <SendTo light id="bar-send" text={`“${picked.text}”\n${picked.ref} (${picked.translation.toUpperCase()})\n\n${window.location.origin}/bible?ref=${encodeURIComponent(picked.ref)}`} />
-              <button type="button" className="linkbtn light" onClick={() => { setPicked(null); setMark([]); }}>Close</button>
+              <a className="btn btn-gold" href={`https://wa.me/?text=${encodeURIComponent(`${share}\n\n${link}`)}`} target="_blank" rel="noopener noreferrer"><T k="bible.shareWa" /></a>
+              <button type="button" className="linkbtn light" onClick={() => copy(share, picked.ref)}><T k="verse.copy" /></button>
+              <SendTo light id="bar-send" text={`${share}\n\n${link}`} />
+              <button type="button" className="linkbtn light" onClick={() => { setPicked(null); setMark([]); }}><T k="common.close" /></button>
             </div>
           </div>
         </div>
