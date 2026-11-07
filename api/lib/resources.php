@@ -116,7 +116,11 @@ function resources(): array
             'fields' => [
                 'name' => ['type' => 'text', 'max' => 120, 'label' => 'Name'],
                 'title' => ['type' => 'text', 'max' => 200, 'label' => 'Headline'],
-                'body' => ['type' => 'textarea', 'required' => true, 'max' => 6000, 'label' => 'Testimony'],
+                'place' => ['type' => 'text', 'max' => 120, 'label' => 'Where they are from'],
+                'body' => ['type' => 'textarea', 'max' => 6000, 'label' => 'Testimony (written)'],
+                'media' => ['type' => 'file', 'accept' => 'audio/*,video/*', 'label' => 'Voice note or video'],
+                'photo' => ['type' => 'file', 'accept' => 'image/*', 'label' => 'Their picture (optional)'],
+                'contact' => ['type' => 'text', 'max' => 190, 'label' => 'Phone or email (private, never shown on the site)'],
                 'status' => ['type' => 'select', 'options' => STATUSES, 'default' => 'review', 'label' => 'Status'],
             ],
         ],
@@ -207,7 +211,7 @@ function clean_fields(array $def, array $in, bool $partial = false): array
                 break;
             case 'file':
                 $prefix = rtrim((string)config('uploads_url'), '/') . '/';
-                if ($v !== '' && (!preg_match('#^/[A-Za-z0-9/_.-]+$#', $v) || str_contains($v, '..') || (!str_starts_with($v, $prefix) && !str_starts_with($v, '/img/')))) {
+                if ($v !== '' && (!preg_match('#^/[A-Za-z0-9/_.-]+$#', $v) || str_contains($v, '..') || (!str_starts_with($v, $prefix) && !str_starts_with($v, '/img/') && !str_starts_with($v, '/video/')))) {
                     throw new ApiError(422, "$label must be an uploaded file.");
                 }
                 break;
@@ -289,6 +293,9 @@ function resource_update(string $name, int $id, array $in): array
 // Extra checks for some sections
 function resource_check(string $name, array &$data): void
 {
+    if ($name === 'testimonies' && array_key_exists('body', $data) && trim((string)$data['body']) === '' && ($data['media'] ?? '') === '') {
+        throw new ApiError(422, 'A testimony needs written words, a voice note or a video.');
+    }
     if ($name === 'sms_contacts' && isset($data['phone'])) {
         $p = sms_phone((string)$data['phone']);
         if (!$p) throw new ApiError(422, 'That phone number was not understood. Write it like 0772 123456, or with + and the country code.');
@@ -336,7 +343,9 @@ function public_content(): array
         rows("SELECT id, file, caption, category, taken_on FROM photos WHERE status = 'live' ORDER BY created_at DESC, id DESC LIMIT 300"));
     $events = rows("SELECT id, title, kind, starts_at, ends_at, venue, details, cover FROM events WHERE status = 'live' AND (starts_at >= ? OR ends_at >= ?) ORDER BY starts_at ASC LIMIT 40", ["$today 00:00:00", "$today 00:00:00"]);
     $news = rows("SELECT id, title, body, link, starts_on, ends_on FROM announcements WHERE status = 'live' AND (starts_on IS NULL OR starts_on <= ?) AND (ends_on IS NULL OR ends_on >= ?) ORDER BY id DESC LIMIT 5", [$today, $today]);
-    $testimonies = rows("SELECT id, name, title, body, created_at FROM testimonies WHERE status = 'live' ORDER BY id DESC LIMIT 30");
+    // The contact column is private: never select it here
+    $testimonies = array_map(fn($t) => $t + ['kind' => media_kind_of($t['media'])],
+        rows("SELECT id, name, place, title, body, media, photo, created_at FROM testimonies WHERE status = 'live' ORDER BY id DESC LIMIT 60"));
 
     return [
         'settings' => $public,

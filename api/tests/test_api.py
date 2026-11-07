@@ -42,6 +42,8 @@ def call(method, path, data=None, form=None, files=None, admin=True, raw=False):
     if files:
         boundary = 'testboundary123'
         parts = []
+        for name, value in (data or {}).items():
+            parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode())
         for name, (fname, content, ctype) in files.items():
             parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"; filename="{fname}"\r\nContent-Type: {ctype}\r\n\r\n'.encode() + content + b'\r\n')
         body = b''.join(parts) + f'--{boundary}--\r\n'.encode()
@@ -189,6 +191,57 @@ try:
     check('contact message saved', code == 200, r)
     code, r = call('GET', '/api/admin/messages')
     check('messages listed for the office', len(r['items']) == 2, r)
+
+    # ---- Testimonies from the Prayer page ----
+    def media_file(args, ext):
+        out = os.path.join(tmp, f'clip{time.time_ns()}.{ext}')
+        subprocess.run(['ffmpeg', '-v', 'error', '-y'] + args + [out], check=True)
+        return open(out, 'rb').read()
+    voice = media_file(['-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:a', 'libopus'], 'webm')
+    clip = media_file(['-f', 'lavfi', '-i', 'color=c=blue:s=160x120:d=1', '-f', 'lavfi', '-i', 'sine=duration=1', '-shortest', '-c:v', 'libvpx', '-c:a', 'libopus'], 'webm')
+    code, r = call('POST', '/api/testimony', {'name': 'Grace', 'body': '', 'consent': '1'}, admin=False)
+    check('empty testimony refused', code == 422, r)
+    code, r = call('POST', '/api/testimony', {'name': 'Grace', 'body': 'God healed me.'}, admin=False)
+    check('testimony needs permission to share', code == 422 and 'share' in r.get('error', ''), r)
+    code, r = call('POST', '/api/testimony', {'name': 'Bot', 'body': 'spam', 'consent': '1', 'website': 'x'}, admin=False)
+    code2, rows_ = call('GET', '/api/admin/r/testimonies')
+    check('testimony honeypot drops bots quietly', code == 200 and not any(t['name'] == 'Bot' for t in rows_['items']), rows_)
+    code, r = call('POST', '/api/testimony', {'name': 'Grace Akello', 'place': 'Burweta', 'title': 'Healed after prayer', 'body': 'God healed my back after the crusade.', 'contact': '0772 000111', 'consent': '1'}, admin=False)
+    check('written testimony saved', code == 200, r)
+    code, r = call('POST', '/api/testimony', {'name': 'Moses', 'body': '', 'consent': '1', 'lang': 'lg'}, files={'file': ('voice.webm', voice, 'audio/webm'), 'photo': ('me.jpg', jpeg(400, 400), 'image/jpeg')}, admin=False)
+    check('recorded voice note saved', code == 200, r)
+    code, r = call('POST', '/api/testimony', {'name': 'Sarah', 'consent': '1'}, files={'file': ('video.webm', clip, 'video/webm')}, admin=False)
+    check('recorded video saved', code == 200, r)
+    code, r = call('POST', '/api/testimony', {'name': 'Evil', 'consent': '1'}, files={'file': ('x.php', b'<?php echo 1;', 'audio/webm')}, admin=False)
+    check('testimony refuses a file that is not audio or video', code == 415, r)
+    code, r = call('POST', '/api/testimony', {'name': 'Evil', 'consent': '1'}, files={'file': ('voice.webm', voice, 'audio/webm'), 'photo': ('x.jpg', voice, 'image/jpeg')}, admin=False)
+    check('testimony refuses a picture that is not a photo', code == 415, r)
+    code, c = call('GET', '/api/content', admin=False)
+    check('testimonies stay hidden until approved', c['testimonies'] == [], c['testimonies'])
+    code, rows_ = call('GET', '/api/admin/r/testimonies')
+    ts = {t['name']: t for t in rows_['items']}
+    check('testimonies wait for review', all(ts[n]['status'] == 'review' and ts[n]['source'] == 'website' for n in ('Grace Akello', 'Moses', 'Sarah')), ts)
+    check('voice note stored as audio', ts['Moses']['media'].endswith('.weba') and ts['Moses']['photo'].endswith('.jpg'), ts['Moses'])
+    check('video stored as video', ts['Sarah']['media'].endswith('.webm'), ts['Sarah'])
+    log = open(mail_log).read()
+    check('office told a testimony is waiting', 'New testimony to approve from Moses' in base64_subjects(log) + log and '/admin#testimonies' in log, log[-800:])
+    for n in ('Grace Akello', 'Moses', 'Sarah'):
+        call('POST', f"/api/admin/r/testimonies/{ts[n]['id']}", {'status': 'live'})
+    code, c = call('GET', '/api/content', admin=False)
+    kinds = {t['name']: t['kind'] for t in c['testimonies']}
+    check('approved testimonies shown with their kind', kinds == {'Grace Akello': '', 'Moses': 'audio', 'Sarah': 'video'}, kinds)
+    check('testifier contact never public', all('contact' not in t for t in c['testimonies']) and '0772 000111' not in json.dumps(c), c['testimonies'])
+    code, a = call('GET', ts['Moses']['media'], admin=False, raw=True)
+    check('voice note is served', code == 200, code)
+    code, r = call('POST', f"/api/admin/r/testimonies/{ts['Sarah']['id']}", {'media': '', 'body': ''})
+    check('admin cannot leave a testimony empty', code == 422, r)
+
+    # A deploy that adds columns updates an older database by itself, on the next visit
+    import sqlite3
+    con = sqlite3.connect(os.path.join(tmp, 'test.db'))
+    con.execute('ALTER TABLE testimonies DROP COLUMN place'); con.execute("UPDATE settings SET value = 'older' WHERE name = 'schema_version'"); con.commit(); con.close()
+    code, c = call('GET', '/api/content', admin=False)
+    check('database catches up after a deploy', code == 200 and any(t.get('place') == '' for t in c['testimonies']), c.get('error', c.get('testimonies')))
     log = open(mail_log).read() if os.path.exists(mail_log) else ''
     check('office emailed about gift, prayer and message', log.count('To: pastor@phomi.test') >= 3, log[:500])
 

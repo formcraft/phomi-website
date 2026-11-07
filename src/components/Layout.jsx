@@ -122,6 +122,7 @@ function Footer() {
         <div className="in">
           <span>© {new Date().getFullYear()} {CHURCH.name}</span>
           <span>{t.lang === 'lg' ? 'Yeremiya 18:6' : 'Jeremiah 18:6'}</span>
+          <a className="ftr-admin" href="/admin"><T k="footer.admin" /></a>
         </div>
       </div>
     </footer>

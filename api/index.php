@@ -9,6 +9,7 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $path = '/' . trim(preg_replace('#^.*?/api(?=/|$)#', '', $path), '/');
 
 try {
+    ensure_schema();
     route($method, $path);
 } catch (ApiError $e) {
     json_out(['error' => $e->getMessage()] + $e->extra, $e->status);
@@ -53,6 +54,10 @@ function route(string $method, string $path): void
     }
     if ($method === 'POST' && ($seg[0] ?? '') === 'webhook' && isset($seg[1])) {
         json_out(webhook($seg[1]));
+        return;
+    }
+    if ($is('POST', '/testimony')) {
+        json_out(save_testimony(body(), $_FILES));
         return;
     }
     if ($method === 'POST' && in_array($path, ['/prayer', '/contact'], true)) {
@@ -382,6 +387,54 @@ function save_message(string $kind, array $b): array
     return ['ok' => true];
 }
 
+// A testimony sent from the Prayer page: words, a voice note or a video, and an optional picture.
+// It is always held for review: nothing shows on the site until an admin approves it.
+function save_testimony(array $b, array $files): array
+{
+    $lg = ($b['lang'] ?? '') === 'lg';
+    $L = fn(string $en, string $lug) => $lg ? $lug : $en;
+    if (!empty($b['website'])) return ['ok' => true]; // hidden field that only bots fill in
+    rate_limit('testimony:' . client_ip(), 12, 60); // generous: a whole church can share one Wi-Fi
+    $body = str_in($b, 'body', 5000);
+    $up = function (string $field, array $kinds, int $maxMb) use ($files, $L): string {
+        $f = $files[$field] ?? null;
+        if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return '';
+        if (in_array($f['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true) || ($f['size'] ?? 0) > $maxMb * 1024 * 1024) {
+            throw new ApiError(413, $L("That recording is larger than $maxMb MB. Please make it shorter.", "Ekiwandiiko kino kisukka MB $maxMb. Kikendeeze."));
+        }
+        if ($f['error'] !== UPLOAD_ERR_OK) throw new ApiError(422, $L('The file did not arrive. Please try again.', 'Fayiro teyatuuse. Ddamu ogezeeko.'));
+        $bytes = (string)file_get_contents($f['tmp_name']);
+        $mime = detect_mime($bytes, (string)($f['type'] ?? ''));
+        if (!in_array(MEDIA_TYPES[$mime][0] ?? '', $kinds, true)) {
+            throw new ApiError(415, $field === 'photo'
+                ? $L('The picture must be a JPG or PNG photo.', 'Ekifaananyi kirina okuba JPG oba PNG.')
+                : $L('Please send a voice note or a video (MP3, M4A, MP4 or WebM).', 'Weereza eddoboozi oba vidiyo (MP3, M4A, MP4 oba WebM).'));
+        }
+        return store_media($bytes, $field === 'photo' ? 'testifier' : ((MEDIA_TYPES[$mime][0] === 'audio' ? 'voice' : 'video') . '-testimony'), $mime)['url'];
+    };
+    $media = $up('file', ['audio', 'video'], (int)config('testimony_max_mb', 40));
+    if ($body === '' && $media === '') throw new ApiError(422, $L('Please write your testimony, or record a voice note or a video.', 'Wandiika obujulirwa bwo, oba kwata eddoboozi oba vidiyo.'));
+    if (empty($b['consent'])) throw new ApiError(422, $L('Please tick the box to say the church may share your testimony.', 'Londa akabokisi okukkiriza ekkanisa okugabana obujulirwa bwo.'));
+    $photo = $up('photo', ['image'], 12);
+    $row = [
+        'name' => str_in($b, 'name', 120), 'place' => str_in($b, 'place', 120), 'title' => str_in($b, 'title', 200),
+        'body' => $body, 'media' => $media, 'photo' => $photo, 'contact' => str_in($b, 'contact', 190),
+        'status' => 'review', 'source' => 'website', 'created_at' => now(),
+    ];
+    $id = insert('testimonies', $row);
+    actor('Website visitor');
+    log_change('create', 'testimonies', $id, null, $row + ['id' => $id], 'Testimony sent from the website by ' . ($row['name'] ?: 'Anonymous'));
+    $kind = media_kind_of($media);
+    notify_admins(
+        'New testimony to approve from ' . ($row['name'] ?: 'Anonymous'),
+        "From: " . ($row['name'] ?: 'Anonymous') . ($row['place'] ? ", {$row['place']}" : '') . "\nContact: " . ($row['contact'] ?: '(none)')
+        . ($row['title'] ? "\nHeadline: {$row['title']}" : '') . ($kind ? "\nIncludes a " . ($kind === 'audio' ? 'voice note' : 'video') . '.' : '')
+        . ($body !== '' ? "\n\n$body" : '')
+        . "\n\nIt is not on the website yet. Listen, read and approve it here: " . site_url('/admin#testimonies') . "\n"
+    );
+    return ['ok' => true];
+}
+
 function admin_stats(): array
 {
     $c = fn(string $sql, array $a = []) => (int)(row($sql, $a)['n'] ?? 0);
@@ -395,6 +448,7 @@ function admin_stats(): array
         'photos' => $c("SELECT COUNT(*) AS n FROM photos WHERE status = 'live'"),
         'events' => $c("SELECT COUNT(*) AS n FROM events WHERE status = 'live' AND starts_at >= ?", [date('Y-m-d 00:00:00')]),
         'messages' => $c("SELECT COUNT(*) AS n FROM messages WHERE handled = 0"),
+        'testimonies' => $c("SELECT COUNT(*) AS n FROM testimonies WHERE status = 'review'"),
         'gifts_month' => (int)(row("SELECT COALESCE(SUM(amount),0) AS n FROM gifts WHERE status = 'successful' AND created_at >= ?", [$month])['n'] ?? 0),
         'gifts_count' => $c("SELECT COUNT(*) AS n FROM gifts WHERE status = 'successful' AND created_at >= ?", [$month]),
         'payments' => payment_provider() ?: 'off',

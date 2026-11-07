@@ -113,11 +113,15 @@ function FileField({ name, f, value, onChange }) {
     }
   };
   const isImg = /\.(jpe?g|png|webp)$/i.test(value || '');
+  const isAudio = /\.(mp3|m4a|aac|ogg|wav|weba)$/i.test(value || '');
+  const isVideo = /\.(mp4|mov|webm)$/i.test(value || '');
   return (
     <div className="adm-field">
       <span>{f.label}{f.required ? ' *' : ''}</span>
       <div className="adm-file">
         {value && isImg && <img src={value} alt="" />}
+        {value && isAudio && <audio src={value} controls preload="metadata" className="adm-media" />}
+        {value && isVideo && <video src={value} controls playsInline preload="metadata" className="adm-media adm-video" />}
         {value && !isImg && <a href={value} target="_blank" rel="noreferrer">{value.split('/').pop()}</a>}
         <label className="adm-btn">
           <Icon name="upload" size={16} /> {busy ? 'Uploading…' : value ? 'Replace' : 'Upload'}
@@ -276,6 +280,9 @@ function ResourceSection({ res, schema }) {
       {res === 'videos' && (
         <Note>Paste a YouTube, TikTok or Facebook video link, or upload a short MP4. Videos show under Recent Moments on the Sermons and Home pages.</Note>
       )}
+      {res === 'testimonies' && (
+        <Note>Testimonies sent from the Prayer page wait here as <b>Waiting</b> until you press Publish. Read, listen to or watch each one first. The phone or email is private: it is never shown on the website.</Note>
+      )}
       {res === 'photos' && <BulkPhotos categories={schema.categories} onDone={load} />}
       <div className="adm-filters">
         <input type="search" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search" />
@@ -294,15 +301,17 @@ function ResourceSection({ res, schema }) {
               {res === 'photos' && it.file && <img src={it.file.replace(/\.jpg$/, '-sm.jpg')} onError={(e) => { e.currentTarget.src = it.file; }} alt="" loading="lazy" />}
               {res !== 'photos' && it.cover && <img className="th" src={it.cover} alt="" loading="lazy" />}
               <div className="txt">
-                <strong>{it[TITLE_KEY[res]] || <em>No caption</em>}</strong>
+                <strong>{it[TITLE_KEY[res]] || (res === 'testimonies' && it.name) || <em>No caption</em>}</strong>
                 <span>
                   {[res === 'verses' ? (it.kind === 'week' ? 'Verse of the Week' : 'Verse of the Day') : null, res === 'verses' ? it.theme : null,
                     res === 'subscribers' ? [it.name, Number(it.daily) ? 'daily' : null, Number(it.weekly) ? 'weekly' : null, it.status].filter(Boolean).join(', ') : null,
                     res === 'sms_contacts' ? [it.name, Number(it.call_me) ? 'please call' : null, Number(it.daily) ? 'SMS verse' : null, it.status].filter(Boolean).join(', ') : null,
                     res === 'photos' || res === 'videos' ? it.category : null, res === 'videos' ? linkName(it) : null, res === 'sermons' ? it.preacher : null, res === 'senders' ? it.name : null,
                     DATE_KEY[res] === 'starts_at' ? when(it.starts_at) : day(it[DATE_KEY[res]]),
-                    it.source === 'email' ? 'by email' : null].filter(Boolean).join(' · ')}
+                    res === 'testimonies' ? [it.name, it.place, it.contact ? `contact: ${it.contact}` : null].filter(Boolean).join(', ') : null,
+                    it.source === 'email' ? 'by email' : it.source === 'website' ? 'from the website' : null].filter(Boolean).join(' · ')}
                 </span>
+                {res === 'testimonies' && <TestimonyPreview it={it} />}
               </div>
               {hasStatus && <Badge s={it.status} />}
               <div className="acts">
@@ -316,6 +325,17 @@ function ResourceSection({ res, schema }) {
         </ul>
       )}
     </>
+  );
+}
+
+function TestimonyPreview({ it }) {
+  const audio = /\.(mp3|m4a|aac|ogg|wav|weba)$/i.test(it.media || '');
+  return (
+    <div className="adm-tst">
+      {it.photo && <img src={it.photo} alt="" className="adm-tst-av" />}
+      {it.body && <p>{it.body.length > 240 ? it.body.slice(0, 240) + '…' : it.body}</p>}
+      {it.media && (audio ? <audio src={it.media} controls preload="none" className="adm-media" /> : <video src={it.media} controls playsInline preload="none" className="adm-media adm-video" />)}
+    </div>
   );
 }
 
@@ -935,6 +955,7 @@ function Dashboard() {
       <div className="adm-head"><h1>Overview</h1><Link className="adm-btn" to="/" target="_blank">View website</Link></div>
       <div className="adm-stats">
         <a href="#inbox"><b>{s.review}</b><span>emailed updates waiting</span></a>
+        <a href="#testimonies"><b>{s.testimonies}</b><span>testimonies waiting for approval</span></a>
         <a href="#messages"><b>{s.messages}</b><span>new prayer requests &amp; messages</span></a>
         <a href="#gifts"><b>UGX {fmt(s.gifts_month)}</b><span>given this month ({s.gifts_count})</span></a>
         <a href="#sermons"><b>{s.sermons}</b><span>sermons</span></a>

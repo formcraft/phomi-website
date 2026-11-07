@@ -64,6 +64,7 @@ npm run local
 | Sermons, Events, Gallery | Pictures load, the photo viewer opens and closes, filters work |
 | Give `/give` | Type `0772 123456`: MTN is picked. Type `0752 123456`: Airtel is picked. Give UGX 500 and wait for "Thank you" |
 | Prayer, Contact | Send a request. It appears in Admin → Prayer & messages |
+| Prayer → Testimonies | The gallery shows six sample testimonies (preview only, never on the live site). Send your own: write one, press *Voice note* or *Video* and record (the browser asks to use the microphone or camera; press Allow), or choose a file. It waits in Admin → Testimonies until you press Publish. Recording works on `localhost`; on a phone over `--lan` (plain http) browsers block the microphone, so use *choose a file* there, or try it on the live site, which has HTTPS |
 | Admin → Daily verses | Change tomorrow's verse; download today's pictures |
 | Admin → Verse emails & SMS | Preview a letter, pause and resume, send a test |
 | Admin → Email list / Phone list | See the sign-ups, download the lists, press **Email both lists now** and check `/__mail` |
@@ -90,7 +91,7 @@ There are no visitor passwords. Visitors only give an email or a phone number. T
 - **Email sign-ups are double opt-in.** Nobody is added until they press Confirm in their own inbox. Links in emails only act when a button is pressed, so email scanners can't confirm or unsubscribe anyone. Every email has a one-click unsubscribe.
 - **Spam and flooding.** The forms have a hidden bot trap and limits per address and per hour, so the site can't be used to flood someone's inbox or phone.
 - **Admin sign-in.** Passwords of 10 or more characters are stored hashed. Repeated guessing is slowed down. The admin cookie is HTTPS-only and same-site, and sign-in ends after 12 hours of no use. Admin requests from other websites are refused.
-- **Browser protections.** A strict Content Security Policy only allows this site's own scripts, plus videos from YouTube, TikTok and Facebook. Other sites can't frame the pages. On Hostinger, HTTPS is forced and remembered, and camera, microphone and location are switched off.
+- **Browser protections.** A strict Content Security Policy only allows this site's own scripts, plus videos from YouTube, TikTok and Facebook. Other sites can't frame the pages. On Hostinger, HTTPS is forced and remembered. Camera and microphone may only be used by this site itself (for recording testimonies, and only after the visitor presses Allow); location, payment and USB access are switched off.
 - **Server files.** The code, settings, data and tests can't be downloaded. Hidden files (.git, .env) are never served. Uploaded files can't run as programs. Secrets live in `phomi-config.php` outside the website folder.
 - **Links to other websites** (Facebook, YouTube, WhatsApp, maps) open in a new tab, so the church site stays open, and the other site can't control the church's tab (`noopener`).
 - **Site text is plain text.** Wording typed in Admin → Site text is shown as text, never run as code. Fonts must come from the list, sizes from 10 to 96, and colours must be real colour codes.

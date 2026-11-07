@@ -145,6 +145,19 @@ try {
     const bar = await page.evaluate(() => { const r = document.querySelector('.verse-bar').getBoundingClientRect(); return { w: r.width, h: r.height, vh: window.innerHeight }; });
     check(`verse share bar fits on ${label}`, bar.w <= (device.viewport?.width || 9999) + 1 && bar.h < bar.vh * 0.6, bar);
 
+    // Testimonies on the phone: the mixed gallery (preview samples) fits, avatars stay on screen, the recorder buttons show
+    await page.goto(`${BASE}/prayer`);
+    await page.waitForSelector('.tst-card');
+    const tg = await page.evaluate(() => ({
+      cards: document.querySelectorAll('.tst-card').length,
+      kinds: [...new Set([...document.querySelectorAll('.tst-card')].map((c) => c.dataset.kind))].sort().join(),
+      off: [...document.querySelectorAll('.tst-av, .tst-card')].filter((e) => { const r = e.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth + 1; }).length,
+    }));
+    check(`testimony gallery mixes text, voice and video on ${label}`, tg.cards >= 6 && tg.kinds === 'audio,text,video', tg);
+    check(`testimony cards and avatars stay on screen on ${label}`, tg.off === 0, tg);
+    await page.locator('#share-testimony .tst-mode').nth(2).tap();
+    check(`video recorder offered on ${label}`, await page.isVisible('#share-testimony button:has-text("Start recording")'));
+
     // Admin on the phone: every section opens without errors and fits the screen
     if (label !== 'tablet 768px') {
       await page.goto(BASE + '/admin');
@@ -200,7 +213,7 @@ try {
   const h = (n) => res.headers.get(n) || '';
   check('pages send a Content Security Policy', /script-src 'self'/.test(h('content-security-policy')) && /object-src 'none'/.test(h('content-security-policy')));
   check('pages refuse to be framed by other sites', h('x-frame-options') === 'SAMEORIGIN' && /frame-ancestors 'self'/.test(h('content-security-policy')));
-  check('pages send nosniff, referrer and permissions headers', h('x-content-type-options') === 'nosniff' && !!h('referrer-policy') && /camera=\(\)/.test(h('permissions-policy')));
+  check('pages send nosniff, referrer and permissions headers', h('x-content-type-options') === 'nosniff' && !!h('referrer-policy') && /camera=\(self\)/.test(h('permissions-policy')) && /geolocation=\(\)/.test(h('permissions-policy')));
   const hta = readFileSync(join(ROOT, 'public', '.htaccess'), 'utf8');
   const apiHta = readFileSync(join(ROOT, 'api', '.htaccess'), 'utf8');
   check('Hostinger forces HTTPS and HSTS', /RewriteCond %\{HTTPS\} off/.test(hta) && /Strict-Transport-Security/.test(hta));

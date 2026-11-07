@@ -30,7 +30,7 @@ You are finishing and launching the website for **Potter's House Outreach Minist
 6. Do anything outward-facing only when the owner says so: the first deploy over the WordPress site, real payment tests, and messages to providers. Ask first, once.
 7. Use British English in site copy. Keep the voice warm and plain. **Every new piece of text goes in `src/text.js` with both English and Luganda** (the site test fails if Luganda is missing), and is shown with `<T k="…" />` or `t('…')` so the church can change it in Admin → Site text. Links to other websites open in a new tab (`target="_blank" rel="noopener noreferrer"`); the phone test checks every page.
 8. **No AI at runtime.** The website must run on plain scripts only: never add an AI service, model call or API key to the site or its cron jobs.
-9. **Humans approve.** Emailed updates always wait for an admin's approval, and every content or settings change must be recorded through `log_change()` so it can be undone in Admin → History & undo.
+9. **Humans approve.** Testimonies sent from the website and emailed updates always wait for an admin's approval, and every content or settings change must be recorded through `log_change()` so it can be undone in Admin → History & undo.
 10. **The Verse of the Day is never random.** It comes from a planned `verses` row or the fixed built-in list. Mailing lists stay double opt-in with a working unsubscribe, and SMS only goes to numbers that signed up or that an admin added.
 11. **No paid services the owner hasn't agreed to.** The owner will not pay for GitHub extras (no paid plan, no GitHub CLI). Use free GitHub Actions on the public repo, or manual upload.
 
@@ -73,8 +73,9 @@ Keep a short progress list in `docs/LAUNCH-PROGRESS.md` on the branch: date, pha
 4. **Installer**: the owner opens `https://pottershouseoutreachministriesinternational.com/api/install.php?token=<install_token>`. Every line must show ✅, including "Bible text loaded". Fix anything that shows ❌ (usually a PHP extension, or the database details). They then create the admin account: email **formcraftinc@gmail.com**, and a password of 10 or more characters that they choose themselves (it starts with "Potters"). They type it into the installer; never ask them to paste it into the chat, and never write it in any file. They can change it any time in Admin → Account. After that, remove `install_token` from `phomi-config.php`. Check the installer shows "Bible text loaded (KJV, WEB and Luganda)".
 5. **Check it works**: open `/api/health` (database: true), the home page, `/bible?ref=John+3:16` and `/admin` on the owner's phone. From this computer, run `curl -sI` against the live site: the home page (status 200, `content-security-policy` and `strict-transport-security` headers), `/about-us` (301 to `/about`), `/api/lib/db.php` (403) and `/phomi-config.php` (404).
 
-6. **Languages and wording**: open the live site on the owner's phone, press the **Luganda** button in the menu bar, and check a few pages and `/bible` (it opens the Luganda Bible, with the Biblica credit under each chapter). In Admin → *Site text & language*, choose the first language for new visitors with the owner. In Admin → *Social links*, enter the Facebook, YouTube, TikTok, Instagram and WhatsApp Channel links, then check each footer icon opens the right page in a new tab.
-7. **Luganda check by a native speaker**: the Luganda wording was written for the church and has not yet been read by a native speaker. Ask the owner who will read it (a pastor or member). They can fix any wording straight away in Admin → Site text (search for the English or Luganda words). Note in `LAUNCH-PROGRESS.md` when this is done.
+6. **Testimonies**: on the owner's phone, open `/prayer`, record a short voice note and a short video in the Share your testimony form, and send them. Check the office alert email arrives, that both wait in Admin → Testimonies, play there, and appear on the Prayer page only after Publish. Then delete them.
+7. **Languages and wording**: open the live site on the owner's phone, press the **Luganda** button in the menu bar, and check a few pages and `/bible` (it opens the Luganda Bible, with the Biblica credit under each chapter). In Admin → *Site text & language*, choose the first language for new visitors with the owner. In Admin → *Social links*, enter the Facebook, YouTube, TikTok, Instagram and WhatsApp Channel links, then check each footer icon opens the right page in a new tab.
+8. **Luganda check by a native speaker**: the Luganda wording was written for the church and has not yet been read by a native speaker. Ask the owner who will read it (a pastor or member). They can fix any wording straight away in Admin → Site text (search for the English or Luganda words). Note in `LAUNCH-PROGRESS.md` when this is done.
 
 ### Phase 4: Email and the 5-minute job
 1. **Update mailbox**: hPanel → Emails → create e.g. `updates@…` (or use `church@…`). Admin → Settings → Update mailbox: enter the address and its password, and press *Save and test the mailbox*.
@@ -104,3 +105,17 @@ Keep a short progress list in `docs/LAUNCH-PROGRESS.md` on the branch: date, pha
 4. Update `docs/LAUNCH-PROGRESS.md` to "Live", and list anything still waiting (for example, the payment account).
 
 Report progress to the owner in plain language. Say what you did, what you checked, and what you need from them next. Ask for one thing at a time.
+
+## After launch: every change goes through GitHub
+
+Once Phase 3 is done, nobody uploads files by hand any more. Every change to the website follows the same path:
+
+1. Open a Claude Code session on `formcraft/phomi-website` (on claude.ai/code or on the computer) and ask for the change in plain words.
+2. Claude Code makes it on a new branch, with tests, and opens a pull request. GitHub Actions runs every test on the pull request. Nothing reaches the live site at this point.
+3. The owner looks at the pull request (and the local preview if they like) and says "merge".
+4. Merging into `main` runs the tests again and uploads the new site to Hostinger over FTP, usually in 5 to 10 minutes. Watch it under the repository's **Actions** tab: a green tick means it is live.
+5. If something looks wrong after a merge, ask Claude Code to revert that pull request. The revert goes through the same tests and upload, so the site is back as it was within minutes.
+
+What the upload never touches: `phomi-config.php` (it sits above `public_html`), `public_html/uploads/` (photos, voice notes and videos people added) and the database. So sermons, testimonies, sign-ups and settings added in the admin page stay safe through every deploy. Changes to the database layout run by themselves: open `/api/health` after the merge, which adds any new columns.
+
+Day-to-day content (sermons, photos, events, verses, testimonies, wording) does **not** need GitHub at all. That is done in the admin page at `/admin` or by email.

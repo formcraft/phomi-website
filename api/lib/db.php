@@ -64,6 +64,22 @@ function now(): string
     return date('Y-m-d H:i:s');
 }
 
+// After a deploy that changed schema.sql or the added columns, brings the database up to date by itself
+// (one tiny query per request otherwise). Before the installer has run there are no tables: it does nothing.
+function ensure_schema(): void
+{
+    $want = md5((string)file_get_contents(dirname(__DIR__) . '/schema.sql') . (string)file_get_contents(__FILE__));
+    try {
+        $have = row("SELECT value FROM settings WHERE name = 'schema_version'")['value'] ?? null;
+    } catch (Throwable $e) {
+        return;
+    }
+    if ($have === $want) return;
+    install_schema();
+    q("DELETE FROM settings WHERE name = 'schema_version'");
+    insert('settings', ['name' => 'schema_version', 'value' => $want]);
+}
+
 // Creates the tables. MySQL schema is the source; SQLite (local tests) gets a light translation.
 function install_schema(): void
 {
@@ -81,7 +97,9 @@ function install_schema(): void
         db()->exec($stmt);
     }
     // Columns added after the first release: a database made by an older version gets them here
-    foreach ([['sms_contacts', 'call_me', 'TINYINT NOT NULL DEFAULT 0'], ['subscribers', 'lang', "VARCHAR(5) NOT NULL DEFAULT 'en'"], ['sms_contacts', 'lang', "VARCHAR(5) NOT NULL DEFAULT 'en'"]] as [$t, $c, $def]) {
+    foreach ([['sms_contacts', 'call_me', 'TINYINT NOT NULL DEFAULT 0'], ['subscribers', 'lang', "VARCHAR(5) NOT NULL DEFAULT 'en'"], ['sms_contacts', 'lang', "VARCHAR(5) NOT NULL DEFAULT 'en'"],
+        ['testimonies', 'place', "VARCHAR(120) NOT NULL DEFAULT ''"], ['testimonies', 'media', "VARCHAR(300) NOT NULL DEFAULT ''"],
+        ['testimonies', 'photo', "VARCHAR(300) NOT NULL DEFAULT ''"], ['testimonies', 'contact', "VARCHAR(190) NOT NULL DEFAULT ''"]] as [$t, $c, $def]) {
         $has = is_sqlite()
             ? in_array($c, array_column(rows("PRAGMA table_info($t)"), 'name'), true)
             : (bool)rows("SHOW COLUMNS FROM `$t` LIKE '$c'");

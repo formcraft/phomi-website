@@ -124,3 +124,5 @@
 .st-chk input{width:20px;height:20px}
 .st-preview{margin:0;padding:12px 14px;border:1px dashed #CDBC9E;border-radius:8px;background:#FFFCF6}
 .adm-actions{display:flex;flex-wrap:wrap;gap:8px}
+.adm-media{max-width:100%;width:320px}.adm-video{max-height:260px;background:#000;border-radius:8px}
+.adm-tst{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;margin-top:8px}.adm-tst p{margin:0;flex:1 1 240px;font-size:14px;white-space:pre-line}.adm-tst-av{width:44px;height:44px;border-radius:50%;object-fit:cover}

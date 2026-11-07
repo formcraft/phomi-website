@@ -16,6 +16,7 @@ return [
 
     'mail_from' => 'church@pottershouseoutreachministriesinternational.com',
     'letters_per_hour' => 100, // verse emails per hour; keep under your Hostinger email plan's limit
+    'testimony_max_mb' => 40, // largest voice note or video a visitor can send with a testimony
     // Daily verse by SMS (optional, paid per message). Fill in after opening an Africa's Talking account.
     'sms' => ['provider' => '', 'username' => '', 'api_key' => '', 'sender_id' => '', 'sandbox' => false],
 

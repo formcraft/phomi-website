@@ -15,6 +15,7 @@ const MEDIA_TYPES = [
     'audio/ogg' => ['audio', 'ogg'],
     'audio/wav' => ['audio', 'wav'],
     'audio/x-wav' => ['audio', 'wav'],
+    'audio/webm' => ['audio', 'weba'],
     'video/mp4' => ['video', 'mp4'],
     'video/quicktime' => ['video', 'mov'],
     'video/webm' => ['video', 'webm'],
@@ -26,7 +27,11 @@ function detect_mime(string $bytes, string $fallback = ''): string
     $f = new finfo(FILEINFO_MIME_TYPE);
     $m = (string)$f->buffer($bytes);
     if ($m === 'application/octet-stream' || $m === '') $m = strtolower($fallback);
-    if ($m === 'video/mp4' && $fallback && str_starts_with(strtolower($fallback), 'audio/')) $m = 'audio/mp4';
+    // Voice notes recorded in the browser are often labelled as video by the file check
+    if ($fallback && str_starts_with(strtolower($fallback), 'audio/')) {
+        if ($m === 'video/mp4') $m = 'audio/mp4';
+        if ($m === 'video/webm') $m = 'audio/webm';
+    }
     return $m;
 }
 
@@ -68,6 +73,15 @@ function store_media(string $bytes, string $origName, string $mimeHint = ''): ar
     }
     file_put_contents("$dir/$name.$ext", $bytes);
     return ['kind' => $kind, 'url' => "$url$name.$ext", 'thumb' => ''];
+}
+
+// audio, video or '' from a stored file's name
+function media_kind_of(string $url): string
+{
+    $ext = strtolower(pathinfo(parse_url($url, PHP_URL_PATH) ?: '', PATHINFO_EXTENSION));
+    if (in_array($ext, ['mp3', 'm4a', 'aac', 'ogg', 'wav', 'weba'], true)) return 'audio';
+    if (in_array($ext, ['mp4', 'mov', 'webm'], true)) return 'video';
+    return '';
 }
 
 function slugify(string $s): string

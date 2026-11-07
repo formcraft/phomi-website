@@ -40,7 +40,8 @@ const shot = async (page, name) => { if (SHOTS) { mkdirSync(SHOTS, { recursive: 
   check('Luganda text keeps the same {blanks} as English', !badBlanks.length, badBlanks.slice(0, 10));
 }
 
-const browser = await chromium.launch();
+// A pretend microphone and camera, so recording on the Prayer page can be tested
+const browser = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 try {
   // One-time setup through the real installer page
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
@@ -56,8 +57,11 @@ try {
   await page.click('button');
   check('installer creates the admin', await page.isVisible('text=All set'));
 
-  // Admin: sign in
-  await page.goto(`${BASE}/admin`);
+  // Admin: sign in, reached from the link at the bottom of every page
+  await page.goto(`${BASE}/about`);
+  await page.click('footer a:has-text("Church admin sign-in")');
+  await page.waitForSelector('input[name=email]');
+  check('footer link opens the admin sign-in', new URL(page.url()).pathname === '/admin');
   await page.fill('input[name=email]', 'pastor@phomi.test');
   await page.fill('input[name=password]', 'correct horse 1');
   await shot(page, 'admin-login');
@@ -257,6 +261,87 @@ try {
   await page.locator('#st-home\\.heroTitle button:has-text("Use the built-in wording")').click();
   await page.waitForSelector('text=Back to the built-in wording.');
   check('admin can put back the built-in wording', true);
+
+  // Testimonies: written, recorded voice note and recorded video; hidden until the admin publishes them
+  {
+    const tc = await browser.newContext({ viewport: { width: 1280, height: 860 }, permissions: ['microphone', 'camera'] });
+    const tp = await tc.newPage();
+    tp.on('pageerror', (e) => errors.push(e.message));
+    await tp.goto(`${BASE}/prayer`);
+    await tp.waitForSelector('.tst-empty');
+    check('Prayer page invites the first testimony', true);
+    const form = tp.locator('#share-testimony');
+    await form.locator('button:has-text("Send testimony")').click();
+    check('testimony form asks for words first', await form.isVisible('text=Please write your testimony.'));
+    await form.locator('textarea[name=body]').fill('God healed my back after the crusade. Glory to God!');
+    await form.locator('input[name=name]').fill('Grace Akello');
+    await form.locator('input[name=place]').fill('Burweta');
+    await form.locator('input[name=title]').fill('Healed after prayer');
+    await form.locator('input[name=contact]').fill('0772 000111');
+    await form.locator('button:has-text("Send testimony")').click();
+    check('testimony needs permission to share', await form.isVisible('text=Please tick the box'));
+    await form.locator('input[name=consent]').check();
+    await form.locator('button:has-text("Send testimony")').click();
+    await tp.waitForSelector('text=Thank you for sharing what God has done!');
+    check('written testimony sent for approval', true);
+    await tp.click('button:has-text("Share another")');
+    await form.locator('.tst-mode:has-text("Voice note")').click();
+    await form.locator('button:has-text("Start recording")').click();
+    await tp.waitForSelector('.tst-recbar');
+    await tp.waitForTimeout(2200);
+    await form.locator('.tst-recbar button:has-text("Stop")').click();
+    await tp.waitForSelector('.tst-rec audio');
+    check('voice note recorded on the page, ready to play back', true);
+    await form.locator('input[name=name]').fill('Moses K');
+    await form.locator('input[type=file][accept="image/*"]').setInputFiles(join(ROOT, 'public', 'img', 'service-family.jpg'));
+    await form.locator('input[name=consent]').check();
+    await shot(tp, 'site-testimony-voice');
+    await form.locator('button:has-text("Send testimony")').click();
+    await tp.waitForSelector('text=Thank you for sharing what God has done!', { timeout: 20000 });
+    check('recorded voice note sent', true);
+    await tp.click('button:has-text("Share another")');
+    await form.locator('.tst-mode:has-text("Video")').click();
+    await form.locator('button:has-text("Start recording")').click();
+    await tp.waitForSelector('.tst-recbar');
+    check('camera preview shows while recording a video', await tp.isVisible('.tst-live'));
+    await tp.waitForTimeout(2200);
+    await form.locator('.tst-recbar button:has-text("Stop")').click();
+    await tp.waitForSelector('.tst-rec video[controls]');
+    await form.locator('input[name=name]').fill('Sarah N');
+    await form.locator('input[name=consent]').check();
+    await form.locator('button:has-text("Send testimony")').click();
+    await tp.waitForSelector('text=Thank you for sharing what God has done!', { timeout: 20000 });
+    check('recorded video sent', true);
+    await tp.goto(`${BASE}/prayer`);
+    await tp.waitForSelector('.tst-empty');
+    check('testimonies stay hidden until approved', (await tp.locator('.tst-card').count()) === 0);
+
+    await page.goto(`${BASE}/admin`);
+    await page.waitForSelector('a[href="#testimonies"] b:has-text("3")');
+    check('admin overview counts testimonies waiting', true);
+    await page.click('nav >> text=Testimonies');
+    await page.waitForSelector('text=contact: 0772 000111');
+    check('admin can listen to the voice note and watch the video', (await page.locator('.adm-tst audio').count()) === 1 && (await page.locator('.adm-tst video').count()) === 1);
+    await shot(page, 'admin-testimonies');
+    for (let i = 0; i < 3; i++) await page.locator('.adm-list li button:has-text("Publish")').first().click().then(() => page.waitForTimeout(400));
+    await tp.goto(`${BASE}/prayer`);
+    await tp.waitForSelector('.tst-card');
+    const kinds = await tp.locator('.tst-card').evaluateAll((els) => els.map((e) => e.dataset.kind).sort().join());
+    check('approved testimonies show as text, voice and video', kinds === 'audio,text,video', kinds);
+    check('each testimony has a floating picture or initials', (await tp.locator('.tst-card .tst-av').count()) === 3 && (await tp.locator('.tst-audio .tst-av img').count()) === 1);
+    check('testifier phone number never shown', !(await tp.textContent('body')).includes('0772 000111'));
+    await tp.locator('.tst-audio .tst-playbtn').click();
+    await tp.waitForSelector('.tst-voice.on');
+    check('voice note plays on the page', true);
+    await tp.locator('.tst-audio .tst-playbtn').click();
+    await tp.locator('#testimonies').scrollIntoViewIfNeeded();
+    await shot(tp, 'site-testimonies');
+    await tp.click('nav.main .langbtn');
+    await tp.waitForSelector('h2:has-text("Obujulirwa")');
+    check('testimonies section in Luganda', await tp.isVisible('.tst-mode:has-text("Eddoboozi")'));
+    await tp.click('nav.main .langbtn');
+    await tc.close();
+  }
 
   // Phone: giving with the PIN prompt
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
