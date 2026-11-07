@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import Seal from './Seal.jsx';
 import { CHURCH, NAV, TIMES } from '../data.js';
 import { useLive } from '../live.jsx';
 import { LangToggle, T, useT } from '../i18n.jsx';
+import { NextSteps } from './NextSteps.jsx';
 
 function ScrollManager() {
   const { pathname, hash } = useLocation();
@@ -19,16 +20,58 @@ function ScrollManager() {
   return null;
 }
 
+function TopLink({ to, k }) {
+  return <NavLink to={to} end={to === '/'} className="nl"><T k={k} /></NavLink>;
+}
+
+// A drop-down in the menu bar: opens on hover with a mouse, and on tap or Enter; Escape or a click elsewhere closes it
+function Drop({ group }) {
+  const t = useT();
+  const { pathname } = useLocation();
+  const [open, setOpen] = useState(false);
+  const box = useRef();
+  const viaHover = useRef(false);
+  const active = group.items.some(([to]) => pathname === to);
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!box.current?.contains(e.target)) setOpen(false); };
+    const key = (e) => { if (e.key === 'Escape') { setOpen(false); box.current?.querySelector('button')?.focus(); } };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', key);
+    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', key); };
+  }, [open]);
+  const id = 'dd-' + group.key.replace(/\W/g, '');
+  return (
+    <div
+      className={'dd' + (open ? ' open' : '')} ref={box}
+      onPointerEnter={(e) => { if (e.pointerType === 'mouse') { viaHover.current = true; setOpen(true); } }}
+      onPointerLeave={(e) => { if (e.pointerType === 'mouse') setOpen(false); }}
+      onBlur={(e) => { if (!box.current?.contains(e.relatedTarget)) setOpen(false); }}
+    >
+      <button
+        type="button" className="nl" aria-expanded={open} aria-controls={id} data-active={active || undefined}
+        onClick={() => { setOpen((o) => (viaHover.current ? true : !o)); viaHover.current = false; }}
+      >
+        <T k={group.key} /> <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+      <div className="dd-menu" id={id} hidden={!open}>
+        {group.items.map(([to, k, d]) => (
+          <NavLink key={to} to={to} className="dd-item">
+            <b>{t(k)}</b>
+            <small>{t(d)}</small>
+          </NavLink>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Header() {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   const t = useT();
   useEffect(() => setOpen(false), [pathname]);
-  const links = NAV.map(([to, , key]) => (
-    <NavLink key={to} to={to} end={to === '/'} className="nl">
-      <T k={key} />
-    </NavLink>
-  ));
   return (
     <header className="site">
       <div className="hdr-top">
@@ -56,13 +99,18 @@ function Header() {
       </div>
       <nav className="main" aria-label="Main">
         <div className="in">
-          {links}
+          {NAV.map((n) => (Array.isArray(n) ? <TopLink key={n[0]} to={n[0]} k={n[1]} /> : <Drop key={n.key} group={n} />))}
           <LangToggle className="langbtn langbtn-nav" />
           <Link className="give-pill" to="/give"><T k="nav.give" /></Link>
         </div>
       </nav>
       <nav className="mnav" id="mnav" aria-label="Main" hidden={!open}>
-        {links}
+        {NAV.map((n) => (Array.isArray(n) ? <TopLink key={n[0]} to={n[0]} k={n[1]} /> : (
+          <div className="mgroup" key={n.key}>
+            <span className="mhead"><T k={n.key} /></span>
+            {n.items.map(([to, k]) => <TopLink key={to} to={to} k={k} />)}
+          </div>
+        )))}
         <Link className="btn btn-gold" to="/give"><T k="nav.give" /></Link>
         <small><T k="header.addr1" /> · {CHURCH.phones[0]}</small>
       </nav>
@@ -164,6 +212,7 @@ export default function Layout() {
       <main id="main">
         <Outlet />
       </main>
+      <NextSteps />
       <Footer />
     </>
   );

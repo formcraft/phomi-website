@@ -67,10 +67,22 @@ function settings_all(): array
     return $out;
 }
 
+// All stored settings as one lookup table (name => value), read from the database once per request
+function settings_map(bool $reset = false): array
+{
+    static $map = null;
+    if ($reset) { $map = null; return []; }
+    if ($map === null) {
+        $map = [];
+        foreach (rows('SELECT name, value FROM settings') as $r) $map[$r['name']] = (string)$r['value'];
+    }
+    return $map;
+}
+
 function setting(string $name): string
 {
-    $v = row('SELECT value FROM settings WHERE name = ?', [$name]);
-    $v = $v ? (string)$v['value'] : (SETTING_DEFAULTS[$name] ?? '');
+    $map = settings_map();
+    $v = array_key_exists($name, $map) ? $map[$name] : (SETTING_DEFAULTS[$name] ?? '');
     if (in_array($name, SECRET_SETTINGS, true) && $v !== '') $v = decrypt_secret($v);
     return $v;
 }
@@ -84,19 +96,56 @@ function setting_set(string $name, string $value): void
     } else {
         insert('settings', ['name' => $name, 'value' => $value]);
     }
+    settings_map(true);
+    if (in_array($name, PUBLIC_SETTINGS, true)) content_changed();
 }
 
 // The stored value as saved (secrets stay encrypted). Used by the change history.
 function setting_raw(string $name): string
 {
-    $v = row('SELECT value FROM settings WHERE name = ?', [$name]);
-    return $v ? (string)$v['value'] : (SETTING_DEFAULTS[$name] ?? '');
+    $map = settings_map();
+    return array_key_exists($name, $map) ? $map[$name] : (SETTING_DEFAULTS[$name] ?? '');
 }
 
 function setting_store(string $name, string $value): void
 {
     if (row('SELECT id FROM settings WHERE name = ?', [$name])) q('UPDATE settings SET value = ? WHERE name = ?', [$value, $name]);
     else insert('settings', ['name' => $name, 'value' => $value]);
+    settings_map(true);
+    content_changed();
+}
+
+// ---------- Ready-made answer for /api/content ----------
+// Every visitor asks for the same content, so it is built once and saved as a file. It is rebuilt when an admin
+// changes anything (content_changed, called from the change history and settings), when the day changes, and
+// at least every 10 minutes as a safety net.
+function cache_dir(): string
+{
+    $dir = (string)config('cache_dir', '');
+    if ($dir === '') {
+        $db = config('db');
+        $dir = sys_get_temp_dir() . '/phomi-cache-' . substr(md5(json_encode($db['dsn'] ?? '') . config('app_key')), 0, 12);
+    }
+    if (!is_dir($dir)) @mkdir($dir, 0700, true);
+    return $dir;
+}
+
+function content_changed(): void
+{
+    @file_put_contents(cache_dir() . '/generation', uniqid('', true));
+}
+
+function content_json(): string
+{
+    $dir = cache_dir();
+    $gen = (string)@file_get_contents("$dir/generation");
+    $file = "$dir/content-" . date('Y-m-d') . '-' . intdiv(time(), 600) . '-' . substr(md5($gen), 0, 10) . '.json';
+    if (is_file($file) && ($json = @file_get_contents($file)) !== false && $json !== '') return $json;
+    $json = json_encode(public_content(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    $tmp = "$file." . getmypid();
+    if (@file_put_contents($tmp, $json) !== false) @rename($tmp, $file);
+    if (random_int(1, 20) === 1) foreach (glob("$dir/content-*.json") ?: [] as $old) if ($old !== $file && filemtime($old) < time() - 900) @unlink($old);
+    return $json;
 }
 
 // Saves several settings at once and records them in the change history (passwords are never recorded).

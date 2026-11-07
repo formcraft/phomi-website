@@ -49,14 +49,20 @@ function insert(string $table, array $data): int
         implode(',', array_fill(0, count($cols), '?'))
     );
     q($sql, array_values($data));
-    return (int)db()->lastInsertId();
+    $id = (int)db()->lastInsertId();
+    if (in_array($table, CONTENT_TABLES, true)) content_changed();
+    return $id;
 }
+
+// Tables shown on the public site: writing to one rebuilds the saved /api/content answer
+const CONTENT_TABLES = ['sermons', 'videos', 'photos', 'events', 'announcements', 'testimonies', 'verses', 'site_text', 'settings'];
 
 function update(string $table, int $id, array $data): void
 {
     if (!$data) return;
     $set = implode(',', array_map(fn($c) => "$c = ?", array_keys($data)));
     q("UPDATE $table SET $set WHERE id = ?", [...array_values($data), $id]);
+    if (in_array($table, CONTENT_TABLES, true)) content_changed();
 }
 
 function now(): string
@@ -104,5 +110,12 @@ function install_schema(): void
             ? in_array($c, array_column(rows("PRAGMA table_info($t)"), 'name'), true)
             : (bool)rows("SHOW COLUMNS FROM `$t` LIKE '$c'");
         if (!$has) db()->exec("ALTER TABLE $t ADD COLUMN $c $def");
+    }
+    // Indexes added after the first release, so the site's lists come straight from an index
+    foreach ([['testimonies', 'testimonies_list', 'status, id'], ['announcements', 'announcements_list', 'status, id'], ['messages', 'messages_open', 'handled, id']] as [$t, $name, $cols]) {
+        $has = is_sqlite()
+            ? (bool)rows("SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?", [$name])
+            : (bool)rows("SHOW INDEX FROM `$t` WHERE Key_name = ?", [$name]);
+        if (!$has) db()->exec("CREATE INDEX $name ON $t ($cols)");
     }
 }

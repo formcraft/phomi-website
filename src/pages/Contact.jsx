@@ -3,6 +3,7 @@ import { ContactForm } from '../components/MessageForm.jsx';
 import { Banner, CopyButton, MapCard, PrayerWhen, Tbc } from '../components/ui.jsx';
 import { CHURCH, TIMES } from '../data.js';
 import { useLive } from '../live.jsx';
+import { PlanVisit } from '../components/NextSteps.jsx';
 import { T, useT } from '../i18n.jsx';
 
 export default function Contact() {
@@ -11,6 +12,7 @@ export default function Contact() {
   return (
     <>
       <Banner photo="church-front" eyebrow={<T k="contact.eyebrow" />} title={<T k="contact.title" />} crumb={<T k="contact.crumb" />} />
+      <PlanVisit />
       <section className="sec band">
         <div className="wrap cards4">
           <div className="ccard">
@@ -44,7 +46,7 @@ export default function Contact() {
             <h2 className="h2" style={{ fontSize: 34 }}><T k="contact.messageTitle" /></h2>
             <ContactForm id="contact" button={t('form.sendMessage')} />
           </div>
-          <div className="stack" style={{ gap: 20 }}>
+          <div className="stack" style={{ gap: 20 }} id="map">
             <MapCard />
             <div className="infolist">
               <strong><T k="contact.times" /></strong>

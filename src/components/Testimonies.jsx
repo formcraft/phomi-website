@@ -69,9 +69,9 @@ function VoicePlayer({ src, name }) {
         aria-label={t('testi.voiceLabel')}
         onChange={(e) => { a.current.currentTime = Number(e.target.value); setTime(Number(e.target.value)); }}
       />
-      <span className="tst-time">{clock(on || time ? time : len)}</span>
+      <span className="tst-time">{on || time ? clock(time) : Number.isFinite(len) ? clock(len) : <Icon name="mic" size={16} />}</span>
       <audio
-        ref={a} src={src} preload="metadata"
+        ref={a} src={src} preload="none"
         onPlay={() => setOn(true)} onPause={() => setOn(false)} onEnded={() => { setOn(false); setTime(0); }}
         onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setLen(e.currentTarget.duration)}

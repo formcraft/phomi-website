@@ -35,7 +35,7 @@ const fails = [];
 const check = (name, ok, info = '') => { console.log((ok ? 'PASS ' : 'FAIL ') + name + (ok ? '' : `  -> ${typeof info === 'string' ? info : JSON.stringify(info)}`)); if (!ok) fails.push(name); };
 const shot = async (page, name) => { if (SHOTS) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: join(SHOTS, name + '.png'), fullPage: true }); } };
 
-const PAGES = ['/', '/about', '/ministries', '/sermons', '/bible', '/events', '/gallery', '/prayer', '/give', '/contact', '/no-such-page'];
+const PAGES = ['/', '/about', '/ministries', '/sermons', '/bible', '/events', '/gallery', '/testimonies', '/prayer', '/give', '/contact', '/no-such-page'];
 const ADMIN = ['dashboard', 'inbox', 'sermons', 'videos', 'photos', 'events', 'announcements', 'testimonies', 'verses', 'letters', 'subscribers', 'sms_contacts', 'gifts', 'messages', 'senders', 'social', 'text', 'history', 'settings', 'account'];
 const PHONES = [
   ['small Android 320px', { viewport: { width: 320, height: 640 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }],
@@ -146,7 +146,7 @@ try {
     check(`verse share bar fits on ${label}`, bar.w <= (device.viewport?.width || 9999) + 1 && bar.h < bar.vh * 0.6, bar);
 
     // Testimonies on the phone: the mixed gallery (preview samples) fits, avatars stay on screen, the recorder buttons show
-    await page.goto(`${BASE}/prayer`);
+    await page.goto(`${BASE}/testimonies`);
     await page.waitForSelector('.tst-card');
     const tg = await page.evaluate(() => ({
       cards: document.querySelectorAll('.tst-card').length,

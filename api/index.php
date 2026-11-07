@@ -32,7 +32,7 @@ function route(string $method, string $path): void
     }
     if ($is('GET', '/content')) {
         // Browsers check back every visit (no-cache) but only download again when something changed
-        $json = json_encode(public_content(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $json = content_json();
         $etag = '"' . md5($json) . '"';
         header('Content-Type: application/json; charset=utf-8');
         header('Cache-Control: no-cache');

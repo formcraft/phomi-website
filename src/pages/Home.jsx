@@ -8,6 +8,7 @@ import { CHURCH, img, video } from '../data.js';
 import { Subscribe, VerseCard } from '../components/Verse.jsx';
 import { useLive } from '../live.jsx';
 import { T, useT } from '../i18n.jsx';
+import { HelpChooser } from '../components/NextSteps.jsx';
 
 // Phones get a 1 MB copy of the background video. With Data Saver on, or on a slow connection,
 // the video doesn't load at all until the visitor presses play.
@@ -42,7 +43,7 @@ function Hero() {
         <p className="sub"><T k="home.heroSub" /></p>
         <p className="verse"><T k="home.heroVerse" /></p>
         <div className="btn-row" style={{ justifyContent: 'center', marginTop: 8 }}>
-          <Link className="btn btn-gold" to="/contact"><T k="common.planVisit" /></Link>
+          <Link className="btn btn-gold" to="/contact#visit"><T k="common.planVisit" /></Link>
           <Link className="btn btn-light" to="/#story"><T k="home.discover" /></Link>
         </div>
       </div>
@@ -70,6 +71,7 @@ export default function Home() {
           <Link to="/ministries?tab=outreach"><Icon name="globe" size={34} /><span><T k="home.pillarOutreach" /></span></Link>
         </div>
       </div>
+      <HelpChooser />
       {v?.day?.text && (
         <section className="sec band verse-home" aria-label={t('home.verseSection')}>
           <div className="wrap verse-home-in">

@@ -227,7 +227,7 @@ try {
   // The language button: the whole site and the Bible in Luganda, remembered on the next visit
   await page.click('nav.main .langbtn');
   await page.waitForSelector('h1:has-text("Tufuulibwa abaggya")');
-  check('language button switches the site to Luganda', (await page.getAttribute('html', 'lang')) === 'lg' && await page.isVisible('nav.main >> text=Bayibuli'));
+  check('language button switches the site to Luganda', (await page.getAttribute('html', 'lang')) === 'lg' && await page.isVisible('nav.main >> text=Laba & Soma') && await page.isVisible('nav.main >> text=Obujulirwa'));
   for (const w of [960, 1000, 1080, 1280, 1440]) {
     await page.setViewportSize({ width: w, height: 800 });
     const navH = await page.evaluate(() => document.querySelector('nav.main .in').getBoundingClientRect().height);
@@ -250,7 +250,7 @@ try {
   check('Luganda sign-up is answered in Luganda', /Kumpi kuggwa/.test(await page.textContent('#bible-subscribe .ok')));
   await page.click('nav.main .langbtn');
   await page.waitForFunction(() => document.documentElement.lang === 'en');
-  check('language button switches back to English', await page.isVisible('nav.main >> text=Bible'));
+  check('language button switches back to English', await page.isVisible('nav.main >> text=Watch & Read'));
   await page.goto(`${BASE}/?lang=lg`);
   await page.waitForFunction(() => document.documentElement.lang === 'lg');
   check('a ?lang=lg link opens the site in Luganda', true);
@@ -262,14 +262,64 @@ try {
   await page.waitForSelector('text=Back to the built-in wording.');
   check('admin can put back the built-in wording', true);
 
+  // The menu: six items, drop-downs that open by hover, click or keyboard, and visitor journeys
+  {
+    const mp = await (await browser.newContext({ viewport: { width: 1280, height: 860 } })).newPage();
+    mp.on('pageerror', (e) => errors.push(e.message));
+    await mp.goto(`${BASE}/`);
+    const top = await mp.locator('nav.main .in > a.nl, nav.main .in > .dd').count();
+    check('menu bar has six items', top === 6, top);
+    await mp.hover('nav.main button:has-text("About")');
+    await mp.click('.dd-menu >> text=Ministries');
+    await mp.waitForURL('**/ministries');
+    check('About drop-down opens on hover and goes to Ministries', true);
+    check('drop-down marks its section as current', await mp.isVisible('nav.main button[data-active]:has-text("About")'));
+    await mp.focus('nav.main button:has-text("Watch & Read")');
+    await mp.keyboard.press('Enter');
+    check('drop-down opens with the keyboard', (await mp.getAttribute('nav.main button:has-text("Watch & Read")', 'aria-expanded')) === 'true');
+    await mp.keyboard.press('Escape');
+    check('Escape closes the drop-down', (await mp.getAttribute('nav.main button:has-text("Watch & Read")', 'aria-expanded')) === 'false');
+    check('each page ends with its next steps', (await mp.locator('.next-steps .step').count()) === 3);
+    await mp.goto(`${BASE}/`);
+    check('home page asks how we can help, with six paths', (await mp.locator('.help .step').count()) === 6);
+    await mp.click('.help .step[data-step=visit]');
+    await mp.waitForSelector('#visit h2');
+    const wa = await mp.getAttribute('#visit a:has-text("Send on WhatsApp")', 'href');
+    check('Plan your visit sends a ready-made WhatsApp message', /wa\.me\/\d+\?text=Hello/.test(wa), wa);
+    await mp.waitForFunction(() => navigator.serviceWorker?.controller || navigator.serviceWorker?.getRegistration().then((r) => !!r), null, { timeout: 5000 }).catch(() => {});
+    await mp.context().close();
+  }
+
+  // The saved app shell: after one visit, pages open with no signal at all (service workers need https or localhost)
+  {
+    const sc = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const sp = await sc.newPage();
+    sp.on('pageerror', (e) => errors.push(e.message));
+    const LOCAL = `http://localhost:${PORT}`;
+    await sp.goto(`${LOCAL}/`);
+    await sp.evaluate(() => navigator.serviceWorker.ready);
+    await sp.waitForTimeout(2500);
+    await sp.reload();
+    check('service worker looks after the site', await sp.evaluate(() => !!navigator.serviceWorker.controller));
+    await sc.setOffline(true);
+    await sp.goto(`${LOCAL}/about`);
+    await sp.waitForSelector('h1:has-text("About PHOMI")', { timeout: 8000 });
+    check('pages open with no signal after the first visit', true);
+    await sp.goto(`${LOCAL}/admin`).catch(() => {});
+    check('the admin page is never served from the saved copy', !(await sp.isVisible('input[name=email]').catch(() => false)));
+    await sc.close();
+  }
+
   // Testimonies: written, recorded voice note and recorded video; hidden until the admin publishes them
   {
     const tc = await browser.newContext({ viewport: { width: 1280, height: 860 }, permissions: ['microphone', 'camera'] });
     const tp = await tc.newPage();
     tp.on('pageerror', (e) => errors.push(e.message));
     await tp.goto(`${BASE}/prayer`);
+    await tp.click('a:has-text("Share your testimony")');
+    await tp.waitForURL('**/testimonies#share-testimony');
     await tp.waitForSelector('.tst-empty');
-    check('Prayer page invites the first testimony', true);
+    check('Prayer page leads to the Testimonies page, which invites the first testimony', true);
     const form = tp.locator('#share-testimony');
     await form.locator('button:has-text("Send testimony")').click();
     check('testimony form asks for words first', await form.isVisible('text=Please write your testimony.'));
@@ -312,7 +362,7 @@ try {
     await form.locator('button:has-text("Send testimony")').click();
     await tp.waitForSelector('text=Thank you for sharing what God has done!', { timeout: 20000 });
     check('recorded video sent', true);
-    await tp.goto(`${BASE}/prayer`);
+    await tp.goto(`${BASE}/testimonies`);
     await tp.waitForSelector('.tst-empty');
     check('testimonies stay hidden until approved', (await tp.locator('.tst-card').count()) === 0);
 
@@ -324,7 +374,8 @@ try {
     check('admin can listen to the voice note and watch the video', (await page.locator('.adm-tst audio').count()) === 1 && (await page.locator('.adm-tst video').count()) === 1);
     await shot(page, 'admin-testimonies');
     for (let i = 0; i < 3; i++) await page.locator('.adm-list li button:has-text("Publish")').first().click().then(() => page.waitForTimeout(400));
-    await tp.goto(`${BASE}/prayer`);
+    await tp.goto(`${BASE}/`);
+    await tp.click('nav.main >> text=Testimonies');
     await tp.waitForSelector('.tst-card');
     const kinds = await tp.locator('.tst-card').evaluateAll((els) => els.map((e) => e.dataset.kind).sort().join());
     check('approved testimonies show as text, voice and video', kinds === 'audio,text,video', kinds);
@@ -365,7 +416,7 @@ try {
   await shot(p2, 'phone-give-done');
 
   // No sideways scrolling on a phone, and the admin works on a phone
-  for (const path of ['/', '/sermons', '/gallery', '/events', '/bible', '/give', '/prayer', '/contact', '/admin']) {
+  for (const path of ['/', '/sermons', '/gallery', '/events', '/bible', '/give', '/testimonies', '/prayer', '/contact', '/admin']) {
     await p2.goto(BASE + path);
     await p2.waitForTimeout(400);
     const over = await p2.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

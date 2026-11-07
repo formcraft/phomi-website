@@ -548,3 +548,48 @@ footer .base .in{max-width:1160px;margin:0 auto;padding:20px var(--gr) 20px var(
 }
 @media (prefers-reduced-motion:reduce){.tst-av,.tst-voice.on .tst-wave i,.tst-dot{animation:none}.tst-card:hover{transform:none}}
 footer .base .ftr-admin{color:var(--onDark);text-decoration:underline;text-underline-offset:3px;display:inline-flex;align-items:center;min-height:44px;margin-block:-12px}footer .base .ftr-admin:hover{color:var(--accentLight)}
+
+/* Menu drop-downs */
+nav.main .dd{position:relative;display:inline-flex}
+nav.main button.nl{display:inline-flex;align-items:center;gap:5px;min-height:48px;padding:0 11px;font:500 14px var(--body);color:var(--dark);background:none;border:0;border-bottom:2px solid transparent;cursor:pointer}
+nav.main button.nl:hover,nav.main .dd.open button.nl{color:var(--accentText)}
+nav.main button.nl[data-active]{font-weight:600;color:var(--accentText);border-bottom-color:var(--accent)}
+nav.main button.nl svg{transition:transform .2s}
+nav.main .dd.open button.nl svg{transform:rotate(180deg)}
+.dd-menu{position:absolute;top:100%;left:50%;transform:translateX(-50%);z-index:70;min-width:280px;background:var(--ground);border:1px solid var(--line2);border-radius:14px;box-shadow:0 18px 40px rgba(27,42,71,.18);padding:8px;display:flex;flex-direction:column}
+.dd-menu::before{content:"";position:absolute;left:0;right:0;top:-10px;height:10px}
+.dd-item{display:flex;flex-direction:column;gap:2px;padding:10px 14px;border-radius:10px;text-decoration:none;color:var(--dark)}
+.dd-item b{font:600 15px var(--body)}
+.dd-item small{font-size:13px;color:var(--muted);line-height:1.4}
+.dd-item:hover,.dd-item:focus-visible{background:var(--tint);color:var(--dark)}
+.dd-item[aria-current="page"] b{color:var(--accentText)}
+.mnav .mgroup{display:flex;flex-direction:column;border-bottom:1px solid var(--line2);padding-bottom:4px}
+.mnav .mhead{font:600 12px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--accentText);padding-top:14px}
+.mnav .mgroup a.nl{padding-left:14px;border-bottom:0;min-height:44px}
+@media (max-width:1060px){nav.main button.nl{padding:0 8px;font-size:13.5px}}
+.page-wait{min-height:80vh}
+
+/* Visitor journeys: step cards, the home chooser, the next-step band and Plan your visit */
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.steps6{grid-template-columns:repeat(3,minmax(0,1fr))}
+.step{display:flex;align-items:center;gap:14px;padding:18px 18px 18px 16px;border-radius:16px;background:var(--white);border:1px solid var(--line2);text-decoration:none;color:var(--dark);transition:transform .15s,box-shadow .15s,border-color .15s;min-height:88px}
+.step:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(27,42,71,.12);border-color:var(--accent);color:var(--dark)}
+.step-ic{width:48px;height:48px;border-radius:50%;background:#FBEAE4;color:var(--clay);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.step-tx{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.step-tx b{font:600 16px/1.3 var(--body)}
+.step-tx small{font-size:13.5px;color:var(--muted);line-height:1.45}
+.step>svg:last-child{color:var(--accentText);flex:0 0 auto}
+.help{background:var(--ground)}
+.next-steps{background:var(--tint);padding-block:48px}
+.next-steps h2{margin:0 0 20px;font-family:var(--head);font-size:26px}
+.plan{background:var(--ground)}
+.plan-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.plan-steps li{position:relative;background:var(--white);border:1px solid var(--line2);border-radius:16px;padding:30px 22px 22px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.plan-steps .n{position:absolute;top:-18px;left:22px;width:36px;height:36px;border-radius:50%;background:var(--clay);color:var(--white);display:flex;align-items:center;justify-content:center;font:700 16px var(--head)}
+.plan-steps h3{margin:0;font-family:var(--head);font-size:21px}
+.plan-steps p{margin:0;color:var(--muted);font-size:15px;line-height:1.6}
+.plan-steps .btn{margin-top:8px}
+.plan-expect{max-width:720px;margin:28px auto 0;text-align:center;color:var(--muted)}
+@media (max-width:900px){.steps,.steps6{grid-template-columns:repeat(2,minmax(0,1fr))}.plan-steps{grid-template-columns:1fr;gap:30px}}
+@media (max-width:600px){.steps,.steps6{grid-template-columns:1fr}}
+section[id],#map,#bible-subscribe{scroll-margin-top:150px}@media (max-width:900px){section[id],#map,#bible-subscribe{scroll-margin-top:100px}}

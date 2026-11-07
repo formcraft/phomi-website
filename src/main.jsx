@@ -37,3 +37,8 @@ createRoot(document.getElementById('root')).render(
     </BrowserRouter>
   </StrictMode>
 );
+
+// Saves the site's shell on the phone for instant, offline-ready pages (only on HTTPS or this computer)
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !location.pathname.startsWith('/admin')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}

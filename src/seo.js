@@ -21,6 +21,8 @@ export const PAGES = [
     "Photos of worship, outreach, children's ministry and building the church at Potter's House Outreach Ministries International, Butebo District.", 0.6],
   ['/prayer', "Send a prayer request | Potter's House Church, Uganda",
     'Send a prayer request to the pastors and prayer team at Potter\'s House. We pray every week, and you can ask us to pray for you in confidence.', 0.6],
+  ['/testimonies', "Testimonies: what God has done | Potter's House, Uganda",
+    "Read, listen to and watch testimonies from members and friends of Potter's House in Burweta, Butebo District, and share what God has done for you.", 0.7],
   ['/give', "Give by Mobile Money (MTN, Airtel) | Potter's House Church",
     "Support the work of Potter's House Outreach Ministries International with MTN MoMo or Airtel Money. Tithes, offerings, outreach and building.", 0.6],
   ['/contact', "Contact and directions | Potter's House, Burweta, Butebo",

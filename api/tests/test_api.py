@@ -239,6 +239,17 @@ try:
     code, r = call('POST', f"/api/admin/r/testimonies/{ts['Sarah']['id']}", {'media': '', 'body': ''})
     check('admin cannot leave a testimony empty', code == 422, r)
 
+    # /api/content is saved ready-made and answers "nothing changed" (304) to a browser that has it
+    r1 = urllib.request.urlopen(BASE + '/api/content'); etag = r1.headers['ETag']; r1.read()
+    try:
+        urllib.request.urlopen(urllib.request.Request(BASE + '/api/content', headers={'If-None-Match': etag})); not_mod = False
+    except urllib.error.HTTPError as e:
+        not_mod = e.code == 304
+    check('content answers 304 when nothing changed', not_mod and bool(etag))
+    call('POST', f"/api/admin/r/testimonies/{ts['Grace Akello']['id']}", {'title': 'Healed after prayer, praise God'})
+    code, c = call('GET', '/api/content', admin=False)
+    check('saved content is rebuilt as soon as an admin changes something', any(t['title'] == 'Healed after prayer, praise God' for t in c['testimonies']), [t['title'] for t in c['testimonies']])
+
     # A deploy that adds columns updates an older database by itself, on the next visit
     import sqlite3
     con = sqlite3.connect(os.path.join(tmp, 'test.db'))

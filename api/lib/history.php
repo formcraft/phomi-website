@@ -26,6 +26,7 @@ function log_change(string $action, string $table, ?int $id, ?array $before, ?ar
         'before_json' => $before === null ? null : json_encode($before, JSON_UNESCAPED_UNICODE),
         'after_json' => $after === null ? null : json_encode($after, JSON_UNESCAPED_UNICODE),
     ]);
+    content_changed();
 }
 
 function row_label(string $table, array $r): string

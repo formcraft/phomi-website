@@ -23,6 +23,7 @@ RewriteRule ^(donate|giving|donations|support-us)$ /give [L,R=301]
 RewriteRule ^(sermon|messages|media)$ /sermons [L,R=301]
 RewriteRule ^(event|upcoming-events)$ /events [L,R=301]
 RewriteRule ^(photos|photo-gallery)$ /gallery [L,R=301]
+RewriteRule ^(testimony|testimonials|praise-reports?)$ /testimonies [L,R=301]
 RewriteRule ^(feed|comments/feed|home)$ / [L,R=301]
 # WordPress is gone: tell bots that keep knocking on its login page
 RewriteRule ^(wp-login\.php|wp-admin|xmlrpc\.php|wp-content|wp-includes) - [G,L]
@@ -45,6 +46,10 @@ RewriteRule ^ index.html [L]
     Header set Cache-Control "public, max-age=2592000"
   </FilesMatch>
   <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  # The service worker must always be checked, so new versions reach phones
+  <FilesMatch "^sw\.js$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
   # Security headers (scripts/local-server.mjs and the tests read these same lines)

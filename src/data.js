@@ -50,16 +50,14 @@ export const FUNDS = [
 ];
 
 // [path, English label, text key in src/text.js]
+// The menu: six items, two of them drop-downs. [path, text key, short description key]
 export const NAV = [
-  ['/', 'Home', 'nav.home'],
-  ['/about', 'About', 'nav.about'],
-  ['/ministries', 'Ministries', 'nav.ministries'],
-  ['/sermons', 'Sermons', 'nav.sermons'],
-  ['/bible', 'Bible', 'nav.bible'],
-  ['/events', 'Events', 'nav.events'],
-  ['/gallery', 'Gallery', 'nav.gallery'],
-  ['/prayer', 'Prayer Requests', 'nav.prayer'],
-  ['/contact', 'Contact', 'nav.contact']
+  ['/', 'nav.home'],
+  { key: 'nav.aboutGroup', items: [['/about', 'nav.aboutUs', 'nav.d.about'], ['/ministries', 'nav.ministries', 'nav.d.ministries'], ['/events', 'nav.events', 'nav.d.events']] },
+  { key: 'nav.watchGroup', items: [['/sermons', 'nav.sermons', 'nav.d.sermons'], ['/bible', 'nav.bible', 'nav.d.bible'], ['/gallery', 'nav.gallery', 'nav.d.gallery']] },
+  ['/testimonies', 'nav.testimonies'],
+  ['/prayer', 'nav.prayer'],
+  ['/contact', 'nav.contact'],
 ];
 
 export const VALUES = [

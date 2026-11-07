@@ -3,20 +3,32 @@ import { Link, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import { OverlayProvider } from './components/Overlay.jsx';
 import Home from './pages/Home.jsx';
-import About from './pages/About.jsx';
-import Ministries from './pages/Ministries.jsx';
-import Sermons from './pages/Sermons.jsx';
-import Bible from './pages/Bible.jsx';
-import Events from './pages/Events.jsx';
-import Gallery from './pages/Gallery.jsx';
-import Prayer from './pages/Prayer.jsx';
-import Give from './pages/Give.jsx';
-import Contact from './pages/Contact.jsx';
+import { PAGE_LOADERS, warmPages, warmPath } from './pages/loaders.js';
 import { pageMeta } from './seo.js';
 import { setHead } from './head.js';
 import { T } from './i18n.jsx';
 
 const Admin = lazy(() => import('./admin/Admin.jsx'));
+// Each page's code loads on its own, so the first visit downloads only what that page needs.
+// Once the page is showing, the other pages load quietly in the background (see warmPages).
+const page = Object.fromEntries(Object.entries(PAGE_LOADERS).map(([k, load]) => [k, lazy(load)]));
+
+function Warm() {
+  useEffect(() => {
+    warmPages();
+    const onPoint = (e) => {
+      const a = e.target.closest?.('a[href^="/"]');
+      if (a) warmPath(a.getAttribute('href'));
+    };
+    document.addEventListener('pointerover', onPoint, { passive: true });
+    document.addEventListener('touchstart', onPoint, { passive: true });
+    return () => { document.removeEventListener('pointerover', onPoint); document.removeEventListener('touchstart', onPoint); };
+  }, []);
+  return null;
+}
+
+// While a page's code arrives (only on a slow first visit), keep the space so nothing jumps
+const Wait = ({ children }) => <Suspense fallback={<div className="page-wait" aria-busy="true" />}>{children}</Suspense>;
 
 function Title() {
   const { pathname } = useLocation();
@@ -65,19 +77,12 @@ export default function App() {
     <OverlayProvider>
       <Title />
       <OffsiteLinks />
+      <Warm />
       <Routes>
         <Route path="admin/*" element={<Suspense fallback={<p style={{ padding: 32 }}>Loading…</p>}><Admin /></Suspense>} />
         <Route element={<Layout />}>
           <Route index element={<Home />} />
-          <Route path="about" element={<About />} />
-          <Route path="ministries" element={<Ministries />} />
-          <Route path="sermons" element={<Sermons />} />
-          <Route path="bible" element={<Bible />} />
-          <Route path="events" element={<Events />} />
-          <Route path="gallery" element={<Gallery />} />
-          <Route path="prayer" element={<Prayer />} />
-          <Route path="give" element={<Give />} />
-          <Route path="contact" element={<Contact />} />
+          {Object.entries(page).map(([path, P]) => <Route key={path} path={path} element={<Wait><P /></Wait>} />)}
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

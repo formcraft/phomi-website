@@ -63,8 +63,10 @@ npm run local
 | Sign-up (Bible page or Home) | Sign up with an email: open `/__mail` and press Confirm. Sign up with only a phone number and tick **Please call me**: check `/__mail` for the alert to the private list address. Sign up again in Luganda: the answer, the email and the SMS are in Luganda |
 | Sermons, Events, Gallery | Pictures load, the photo viewer opens and closes, filters work |
 | Give `/give` | Type `0772 123456`: MTN is picked. Type `0752 123456`: Airtel is picked. Give UGX 500 and wait for "Thank you" |
+| Menu | Six items: Home, About ▾ (About us, Ministries, Events), Watch & Read ▾ (Sermons, Bible, Gallery), Testimonies, Prayer, Contact, plus the language button and Give. On a phone the menu is grouped the same way |
+| Next steps | Every page ends with three next steps that fit it; the home page asks "How can we help you today?"; Contact starts with *Plan your visit* and a ready-made WhatsApp "I'm coming" message |
 | Prayer, Contact | Send a request. It appears in Admin → Prayer & messages |
-| Prayer → Testimonies | The gallery shows six sample testimonies (preview only, never on the live site). Send your own: write one, press *Voice note* or *Video* and record (the browser asks to use the microphone or camera; press Allow), or choose a file. It waits in Admin → Testimonies until you press Publish. Recording works on `localhost`; on a phone over `--lan` (plain http) browsers block the microphone, so use *choose a file* there, or try it on the live site, which has HTTPS |
+| Testimonies (menu) | The gallery shows six sample testimonies (preview only, never on the live site). Send your own: write one, press *Voice note* or *Video* and record (the browser asks to use the microphone or camera; press Allow), or choose a file. It waits in Admin → Testimonies until you press Publish. Recording works on `localhost`; on a phone over `--lan` (plain http) browsers block the microphone, so use *choose a file* there, or try it on the live site, which has HTTPS |
 | Admin → Daily verses | Change tomorrow's verse; download today's pictures |
 | Admin → Verse emails & SMS | Preview a letter, pause and resume, send a test |
 | Admin → Email list / Phone list | See the sign-ups, download the lists, press **Email both lists now** and check `/__mail` |
