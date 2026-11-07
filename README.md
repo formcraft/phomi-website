@@ -16,7 +16,7 @@ It lives at **https://pottershouseoutreachministriesinternational.com** and is h
 **Want to try it first?** Run the whole site on your own computer with `npm run local`: see [docs/LOCAL-PREVIEW.md](docs/LOCAL-PREVIEW.md).
 
 **Launching?** Start with [docs/INFORMATION-NEEDED.md](docs/INFORMATION-NEEDED.md), then follow [docs/SETUP.md](docs/SETUP.md).
-To have Claude Code finish the launch, use [docs/CLAUDE-CODE-PROMPT.md](docs/CLAUDE-CODE-PROMPT.md).
+To go live with Claude Code guiding you step by step (backup, Hostinger, email, Google), use [docs/GO-LIVE-WITH-CLAUDE-CODE.md](docs/GO-LIVE-WITH-CLAUDE-CODE.md).
 
 ## Run it on your computer
 
@@ -60,6 +60,7 @@ If the backend can't be reached, the site still works with the built-in content 
 | Private address that gets new sign-ups and the lists every Monday | **Admin → Settings → Lists and sign-ups** |
 | Approved senders and who gets alerts | **Admin → Approved senders / Settings** |
 | Built-in photos and videos | `public/img/`, `public/video/` + `src/data.js` → `PHOTOS`, `CLIPS` |
+| Page titles and descriptions for Google, church details for Google Maps | `src/seo.js` (sitemap and robots.txt are made from it at build) |
 | Page text | `src/pages/*.jsx` |
 | Colours, fonts, layout | `src/styles.css` (admin: `src/admin/admin.css`) |
 | Logo (Refined Seal) | `src/components/Seal.jsx`, pot artwork in `public/img/pot.png` |

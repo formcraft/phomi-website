@@ -12,17 +12,18 @@ import Gallery from './pages/Gallery.jsx';
 import Prayer from './pages/Prayer.jsx';
 import Give from './pages/Give.jsx';
 import Contact from './pages/Contact.jsx';
-import { NAV } from './data.js';
+import { pageMeta } from './seo.js';
+import { setHead } from './head.js';
 
 const Admin = lazy(() => import('./admin/Admin.jsx'));
-
-const SITE = "Potter's House Outreach Ministries International";
 
 function Title() {
   const { pathname } = useLocation();
   useEffect(() => {
-    const page = [...NAV, ['/give', 'Give'], ['/admin', 'Admin']].find(([to]) => pathname === to || (to === '/admin' && pathname.startsWith('/admin')));
-    document.title = !page || page[0] === '/' ? `${SITE} | PHOMI` : `${page[1]} | ${SITE}`;
+    if (pathname.startsWith('/admin')) return; // the admin page sets its own title and noindex
+    if (pathname === '/bible') return; // the Bible page names the verse being read
+    const known = pageMeta(pathname);
+    setHead({ path: pathname, ...(known ? {} : { title: "Page not found | Potter's House", noindex: true }) });
   }, [pathname]);
   return null;
 }

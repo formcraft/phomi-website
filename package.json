@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/copy-api.mjs",
+    "build": "vite build && node scripts/seo-build.mjs && node scripts/copy-api.mjs",
     "preview": "vite preview",
     "local": "node scripts/local-server.mjs",
     "test:phone": "node scripts/test-phone.mjs",

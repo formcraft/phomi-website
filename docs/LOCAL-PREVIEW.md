@@ -89,3 +89,7 @@ There are no visitor passwords. Visitors only give an email or a phone number. T
 - **Browser protections.** A strict Content Security Policy only allows this site's own scripts, plus videos from YouTube, TikTok and Facebook. Other sites can't frame the pages. On Hostinger, HTTPS is forced and remembered, and camera, microphone and location are switched off.
 - **Server files.** The code, settings, data and tests can't be downloaded. Hidden files (.git, .env) are never served. Uploaded files can't run as programs. Secrets live in `phomi-config.php` outside the website folder.
 - **No third parties.** Fonts are served by the site itself (no Google Fonts), so visitors aren't tracked. Only the videos you add come from YouTube, TikTok or Facebook.
+
+## Next: going live
+
+When you're happy with the site, follow [GO-LIVE-WITH-CLAUDE-CODE.md](GO-LIVE-WITH-CLAUDE-CODE.md). Claude Code takes you through each step: the WordPress backup, Hostinger, putting the site live, email, and getting found on Google.

@@ -5,8 +5,31 @@ RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# One address per page: no "www.", no trailing slash (Google counts each spelling as a separate page)
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.+)/$ /$1 [L,R=301]
+
 # The PHP backend and uploaded media are real folders, never the page
 RewriteRule ^(api|uploads)(/|$) - [L]
+
+# Addresses from the old WordPress site, so links and Google results keep working
+RewriteRule ^(about-us|who-we-are)$ /about [L,R=301]
+RewriteRule ^(worship|outreach|our-ministries|bible-college|bible-study)$ /ministries [L,R=301]
+RewriteRule ^(prayer-requests?|prayer-request-form)$ /prayer [L,R=301]
+RewriteRule ^(contact-us|location)$ /contact [L,R=301]
+RewriteRule ^(donate|giving|donations|support-us)$ /give [L,R=301]
+RewriteRule ^(sermon|messages|media)$ /sermons [L,R=301]
+RewriteRule ^(event|upcoming-events)$ /events [L,R=301]
+RewriteRule ^(photos|photo-gallery)$ /gallery [L,R=301]
+RewriteRule ^(feed|comments/feed|home)$ / [L,R=301]
+# WordPress is gone: tell bots that keep knocking on its login page
+RewriteRule ^(wp-login\.php|wp-admin|xmlrpc\.php|wp-content|wp-includes) - [G,L]
+
+# Each page has its own HTML file with its title and description for Google (/about → about.html)
+RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+RewriteRule ^([a-z-]+)$ $1.html [L]
 
 # Single-page app: send every page link (/about, /give …) to index.html
 RewriteCond %{REQUEST_FILENAME} !-f

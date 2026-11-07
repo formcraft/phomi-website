@@ -6,6 +6,7 @@ import { useOverlay } from '../components/Overlay.jsx';
 import { api } from '../api.js';
 import { BOOKS, TRANSLATIONS } from '../bible-books.js';
 import { useLive } from '../live.jsx';
+import { setHead } from '../head.js';
 
 const KEY = 'phomi-bible';
 const remember = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } };
@@ -99,6 +100,14 @@ export default function Bible() {
   };
 
   const chapterName = data ? `${data.name === 'Psalms' ? 'Psalm' : data.name} ${data.chapter}` : '';
+  useEffect(() => {
+    const ref = picked?.ref || chapterName;
+    setHead({
+      path: '/bible',
+      title: ref ? `${ref} (${(picked?.translation || data?.translation || 'kjv').toUpperCase()}) | Read the Bible | PHOMI` : undefined,
+      description: picked ? `“${picked.text.length > 130 ? picked.text.slice(0, 130) + '…' : picked.text}” ${picked.ref}. Read the whole Bible free at Potter's House.` : undefined,
+    });
+  }, [picked, chapterName, data]);
   return (
     <>
       <Banner photo="class-room" eyebrow="The Word of God" title="The Bible" crumb="Bible" />

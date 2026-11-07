@@ -27,9 +27,10 @@ if (getenv('PHOMI_LOCAL') === '1' && ($path === '/__mail' || $path === '/__sms')
 if ($path === '/api/install.php') { require dirname(__DIR__) . '/install.php'; return true; }
 if (str_starts_with($path, '/api/') || $path === '/api') { require dirname(__DIR__) . '/index.php'; return true; }
 $file = $_SERVER['DOCUMENT_ROOT'] . $path;
+if (preg_match('~^/([a-z-]+)$~', $path, $pm) && is_file($_SERVER['DOCUMENT_ROOT'] . "/{$pm[1]}.html")) $index = $_SERVER['DOCUMENT_ROOT'] . "/{$pm[1]}.html";
 if ($path !== '/' && is_file($file)) return false; // static files (built site, uploads)
 if (str_starts_with($path, '/uploads/')) { http_response_code(404); return true; }
-$index = $_SERVER['DOCUMENT_ROOT'] . '/index.html';
+$index ??= $_SERVER['DOCUMENT_ROOT'] . '/index.html';
 if (is_file($index)) {
     header('Content-Type: text/html; charset=utf-8');
     // The same security headers as public/.htaccess on Hostinger (minus the HTTPS-only ones, since this is plain http)

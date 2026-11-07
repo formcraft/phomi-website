@@ -140,6 +140,31 @@ try {
     await ctx.close();
   }
 
+  // ---- Found on Google ----
+  {
+    const seen = new Set();
+    for (const path of PAGES.filter((p) => p !== '/no-such-page')) {
+      const html = await (await fetch(BASE + path)).text();
+      const title = html.match(/<title>([^<]*)<\/title>/)?.[1] || '';
+      const desc = html.match(/<meta name="description" content="([^"]*)"/)?.[1] || '';
+      const canon = html.match(/<link rel="canonical" href="([^"]*)"/)?.[1] || '';
+      const ld = html.match(/<script type="application\/ld\+json">([^<]*)<\/script>/)?.[1];
+      let church = null;
+      try { church = JSON.parse(ld); } catch { /* checked below */ }
+      check(`${path}: own title and description in the HTML (${title.length}/${desc.length} chars)`, title && desc && !seen.has(title) && title.length <= 70 && desc.length >= 70 && desc.length <= 170, { title, desc: desc.length });
+      check(`${path}: one address for Google (canonical)`, canon.endsWith(path === '/' ? '/' : path) && canon.startsWith('https://'), canon);
+      check(`${path}: church details for Google (schema.org)`, church?.['@type'] === 'Church' && church.address?.addressCountry === 'UG');
+      check(`${path}: readable without JavaScript`, /<noscript><h1>/.test(html));
+      seen.add(title);
+    }
+    const sitemap = await (await fetch(`${BASE}/sitemap.xml`)).text();
+    check('sitemap lists every page', (sitemap.match(/<loc>/g) || []).length === PAGES.length - 1 && sitemap.includes('/bible</loc>'), sitemap.slice(0, 200));
+    const robots = await (await fetch(`${BASE}/robots.txt`)).text();
+    check('robots.txt points to the sitemap and hides the admin', /Sitemap: https:\/\/.+\/sitemap\.xml/.test(robots) && /Disallow: \/admin/.test(robots), robots);
+    const hta = readFileSync(join(ROOT, 'public', '.htaccess'), 'utf8');
+    check('old WordPress addresses redirect to the new pages', /\^\(about-us/.test(hta) && /\^\(prayer-requests\?/.test(hta) && /R=301/.test(hta));
+  }
+
   // ---- Security basics ----
   const res = await fetch(`${BASE}/bible`);
   const h = (n) => res.headers.get(n) || '';

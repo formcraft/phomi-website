@@ -78,6 +78,17 @@ In **Admin → Settings → Lists and sign-ups**, enter a **private email addres
 - both lists as spreadsheets every Monday morning (switch this off in the same place)
 - both lists at any time, from **Email both lists now** in Admin → Email list or Phone list.
 
+## 10. Getting found on Google
+
+The site already gives Google what it needs: a title and description for each page, the church's address and Sunday times (schema.org), a `sitemap.xml`, a `robots.txt`, and redirects from the old WordPress addresses. After launch:
+
+1. **Google Search Console**: add the domain, verify it with the TXT record in hPanel → DNS, and submit `/sitemap.xml`.
+2. **Google Business Profile**: category *Church*, with the map pin, phone, website, Sunday hours and photos. For a local church, this brings the most visitors.
+3. **Bing Webmaster Tools**: import from Search Console.
+4. Put the website link on Facebook, WhatsApp, YouTube and TikTok, and keep posting sermons and events.
+
+To change a page's title or description, edit `src/seo.js`. [GO-LIVE-WITH-CLAUDE-CODE.md](GO-LIVE-WITH-CLAUDE-CODE.md) (Phase 5) has every click.
+
 ## Troubleshooting
 
 | Problem | Fix |

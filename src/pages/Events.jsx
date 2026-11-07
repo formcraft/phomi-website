@@ -4,6 +4,22 @@ import Icon from '../components/Icon.jsx';
 import { Banner, Photo, PrayerWhen, Tbc } from '../components/ui.jsx';
 import { EVENTS, TIMES } from '../data.js';
 import { eventCard, useLive } from '../live.jsx';
+import { SITE_URL } from '../seo.js';
+
+// Coming events for Google, so they can show in search with their date and place
+const eventSchema = (list) => JSON.stringify(list.filter((e) => e.starts_at).map((e) => ({
+  '@context': 'https://schema.org',
+  '@type': 'Event',
+  name: e.title,
+  startDate: String(e.starts_at).replace(' ', 'T'),
+  ...(e.ends_at ? { endDate: String(e.ends_at).replace(' ', 'T') } : {}),
+  eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+  eventStatus: 'https://schema.org/EventScheduled',
+  location: { '@type': 'Place', name: e.venue || "Potter's House, Burweta", address: { '@type': 'PostalAddress', addressLocality: 'Butebo', addressRegion: 'Butebo District', addressCountry: 'UG' } },
+  organizer: { '@type': 'Organization', name: "Potter's House Outreach Ministries International", url: SITE_URL },
+  ...(e.details ? { description: e.details.slice(0, 300) } : {}),
+  ...(e.cover ? { image: e.cover.startsWith('http') ? e.cover : SITE_URL + e.cover } : {}),
+}))).replace(/</g, '\\u003c');
 
 function EventCard({ e }) {
   return (
@@ -32,6 +48,7 @@ export default function Events() {
   return (
     <>
       <Banner photo="outdoor-service" eyebrow="Gather with us" title="Events" crumb="Events" />
+      {live.length > 0 && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: eventSchema(live) }} />}
       <section className="sec band">
         <div className="wrap">
           <div className="tabs" role="tablist" aria-label="Event view">
