@@ -22,13 +22,13 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 | 2026-11-08 | 1 | WordPress backup downloaded and opened | skipped | Owner's choice, after being told it cannot be undone |
 | 2026-11-08 | 1 | GiveWP donation records exported (if needed) | skipped | Goes with the backup decision |
 | 2026-11-08 | 1 | Redirects for every old address | done | The 8 addresses above now go to /about, /contact or /give. test-phone checks every old sitemap page |
-| 2026-11-08 | 1 | Domain mailboxes noted | waiting | Owner has a paid Hostinger Email plan, set-up failed before. DNS checked: MX = Hostinger, SPF ok, DMARC p=none, DKIM not found (fix in Phase 4). A google-site-verification TXT already exists (Phase 5). Waiting for the mailbox address or for church@ to be created |
-| | 2 | PHP settings | to do | |
+| 2026-11-08 | 1 | Domain mailboxes noted | done | Owner has a paid Hostinger Email plan, set-up failed before. DNS checked: MX = Hostinger, SPF ok, DMARC p=none, DKIM not found (fix in Phase 4). A google-site-verification TXT already exists (Phase 5). Mailbox: church@ (matches mail_from in the config sample) |
+| 2026-11-08 | 2 | PHP settings | waiting | |
 | | 2 | Database and user | to do | |
 | | 2 | phomi-config.php on the server | to do | |
 | | 2 | SSL and Force HTTPS | to do | |
 | | 3 | GitHub FTP secrets | to do | |
-| | 3 | Remove WordPress files from public_html | to do | Only after the backup is confirmed |
+| | 3 | Remove WordPress files from public_html | to do | No backup (owner's choice). Tell the owner the site is offline for a few minutes until the deploy finishes |
 | | 3 | Merge to main and deploy | to do | |
 | | 3 | Installer and admin account | to do | |
 | | 3 | Live checks, testimonies, languages, social links | to do | |
