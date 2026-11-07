@@ -199,12 +199,9 @@ try:
     check('messages listed for the office', len(r['items']) == 2, r)
 
     # ---- Testimonies from the Prayer page ----
-    def media_file(args, ext):
-        out = os.path.join(tmp, f'clip{time.time_ns()}.{ext}')
-        subprocess.run(['ffmpeg', '-v', 'error', '-y'] + args + [out], check=True)
-        return open(out, 'rb').read()
-    voice = media_file(['-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:a', 'libopus'], 'webm')
-    clip = media_file(['-f', 'lavfi', '-i', 'color=c=blue:s=160x120:d=1', '-f', 'lavfi', '-i', 'sine=duration=1', '-shortest', '-c:v', 'libvpx', '-c:a', 'libopus'], 'webm')
+    # Small WebM recordings like the ones browsers make (made once with ffmpeg; CI needs no ffmpeg)
+    voice = open(os.path.join(API, 'tests', 'fixtures', 'voice.webm'), 'rb').read()
+    clip = open(os.path.join(API, 'tests', 'fixtures', 'video.webm'), 'rb').read()
     code, r = call('POST', '/api/testimony', {'name': 'Grace', 'body': '', 'consent': '1'}, admin=False)
     check('empty testimony refused', code == 422, r)
     code, r = call('POST', '/api/testimony', {'name': 'Grace', 'body': 'God healed me.'}, admin=False)
