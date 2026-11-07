@@ -24,7 +24,8 @@ export default function Bible() {
   const [params, setParams] = useSearchParams();
   const last = useMemo(remember, []);
   // Luganda readers start in the Luganda Bible; a link or their last choice wins
-  const [tr, setTr] = useState(params.get('tr') || last.tr || (lg ? 'lug' : ''));
+  // (an English reader is not left in the Luganda Bible from an earlier Luganda visit)
+  const [tr, setTr] = useState(params.get('tr') || (lg ? 'lug' : last.tr !== 'lug' ? last.tr || '' : ''));
   const [book, setBook] = useState(Number(last.book) || 43);
   const [ch, setCh] = useState(Number(last.ch) || 1);
   const [data, setData] = useState(null);

@@ -135,6 +135,7 @@ try {
     // Bible on the phone: open a chapter, tap a verse, the share bar fits
     await page.goto(`${BASE}/bible?ref=Psalm+23:1`);
     await page.waitForSelector('#v1.on');
+    check(`back in English, the Bible is English again on ${label}`, /^Psalm 23/.test(await page.textContent('.chapter h2')), await page.textContent('.chapter h2'));
     await page.tap('#v4');
     await page.waitForSelector('.verse-bar >> text=Psalm 23:4');
     const bar = await page.evaluate(() => { const r = document.querySelector('.verse-bar').getBoundingClientRect(); return { w: r.width, h: r.height, vh: window.innerHeight }; });
