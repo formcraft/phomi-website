@@ -14,6 +14,7 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 
 ## Open questions
 
+- The Premium plan holds three websites: the main domain (WordPress, created 2025-12-28, the one we replace), `church.` (Coming Soon), and **formcraftdesign.com** (the owner's company site: never touch it). Always check the website name at the top left of hPanel before saving.
 - hPanel has a second website, `church.pottershouseoutreachministriesinternational.com`, showing a WordPress "Coming Soon" page. Ask the owner after launch whether to remove it too. Never deploy to it by mistake: the FTP account and folder must be the main domain's.
 
 ## Steps
