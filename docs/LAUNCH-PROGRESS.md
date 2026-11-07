@@ -22,7 +22,7 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 | 2026-11-08 | 1 | WordPress backup downloaded and opened | skipped | Owner's choice, after being told it cannot be undone |
 | 2026-11-08 | 1 | GiveWP donation records exported (if needed) | skipped | Goes with the backup decision |
 | 2026-11-08 | 1 | Redirects for every old address | done | The 8 addresses above now go to /about, /contact or /give. test-phone checks every old sitemap page |
-| 2026-11-08 | 1 | Domain mailboxes noted | waiting | |
+| 2026-11-08 | 1 | Domain mailboxes noted | waiting | Owner has a paid Hostinger Email plan, set-up failed before. DNS checked: MX = Hostinger, SPF ok, DMARC p=none, DKIM not found (fix in Phase 4). A google-site-verification TXT already exists (Phase 5). Waiting for the mailbox address or for church@ to be created |
 | | 2 | PHP settings | to do | |
 | | 2 | Database and user | to do | |
 | | 2 | phomi-config.php on the server | to do | |
