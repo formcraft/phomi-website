@@ -28,8 +28,8 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 | 2026-11-08 | 1 | GiveWP donation records exported (if needed) | skipped | Goes with the backup decision |
 | 2026-11-08 | 1 | Redirects for every old address | done | The 8 addresses above now go to /about, /contact or /give. test-phone checks every old sitemap page |
 | 2026-11-08 | 1 | Domain mailboxes noted | done | Owner has a paid Hostinger Email plan, set-up failed before. DNS checked: MX = Hostinger, SPF ok, DMARC p=none, DKIM not found (fix in Phase 4). A google-site-verification TXT already exists (Phase 5). Mailbox: church@ (matches mail_from in the config sample) |
-| 2026-11-08 | 2 | PHP settings | waiting | hPanel website switcher only shows church., so the settings went to the subdomain again. Finding where the main domain is hosted (other website entry, plan or login; main domain IP ends :9, church. ends :8). Owner first opened the **church.** subdomain website (a separate WordPress "Coming Soon" site, its own IP). Settings must be on the main domain's website. Extensions on church. were fine; memory_limit goes up to 1536M, 256M is enough |
-| | 2 | Database and user | to do | |
+| 2026-11-08 | 2 | PHP settings | done | Checked from screenshots of the main domain: PHP 8.3, all extensions on, max_execution_time 120, memory_limit 1536M, post_max_size 1024M, upload_max_filesize 1024M. Timezone UTC is fine (the app sets Africa/Kampala). No disabled function is used by api/. Earlier the settings went to church. by mistake. Owner first opened the **church.** subdomain website (a separate WordPress "Coming Soon" site, its own IP). Settings must be on the main domain's website. Extensions on church. were fine; memory_limit goes up to 1536M, 256M is enough |
+| 2026-11-08 | 2 | Database and user | waiting | |
 | | 2 | phomi-config.php on the server | to do | |
 | | 2 | SSL and Force HTTPS | to do | |
 | | 3 | GitHub FTP secrets | to do | |
