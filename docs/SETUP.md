@@ -58,6 +58,16 @@ Test with UGX 500 on MTN and on Airtel, then check **Admin → Giving**.
 
 Post sermons and clips to the church's **YouTube** channel or **TikTok**, then add the link in **Admin → Videos** (or email it with the subject `Video:`). The video plays right on the Sermons and Home pages. Put the channel links in **Admin → Settings → Video and social pages** so they show in the footer. TikTok share links (`vm.tiktok.com/…`) are turned into the full address when saved; if that fails, the site shows a *Watch on TikTok* button instead.
 
+## 8. Bible, verse emails and SMS
+
+- The installer loads the Bible text (KJV and WEB) from `api/data/`. If it did not, press *Load the Bible text* in **Admin → Daily verses**. The installer check list needs the **FreeType** (part of GD) and **zlib** extensions for the verse pictures.
+- **Verse of the Day and Week** come from a planned list, never at random. To choose a verse for a date, use *Change* in **Admin → Daily verses**. Days with nothing planned use the built-in list of 252 verses grouped by theme, and 52 weekly verses.
+- **Verse emails are off** until you switch on *Send verse emails* in **Admin → Settings → Bible, verse emails and SMS**. Set the send time (default 06:00). With *Send as planned*, each letter goes out by itself and can be paused first; with *Wait for approval*, nothing is sent until someone presses *Approve* in **Admin → Verse emails & SMS**.
+- New sign-ups get a confirm email first (double opt-in). Every email has an unsubscribe link and the one-click unsubscribe header Gmail and Outlook use.
+- Hostinger limits how many emails an hour a mailbox can send. `letters_per_hour` in `phomi-config.php` (default 100) spreads a big list over several hours. Ask Hostinger for your plan's limit and set it a little lower.
+- **SMS is optional and paid.** Open an [Africa's Talking](https://africastalking.com) account, buy SMS credit, and ask for a sender ID (for example `PHOMI`). Fill in `sms` in `phomi-config.php` (`provider` = `africastalking`, `username`, `api_key`, `sender_id`), then switch on *Send the verse by SMS* in Settings. Test first with *Send today's verse to numbers* in **Admin → SMS list**. Without an account, the free *Send to a number* button on the site still works: it opens the reader's own SMS or WhatsApp app with the verse typed in.
+- **WhatsApp Channel:** create a Channel from the church's WhatsApp, and put its link in **Admin → Settings → Bible, verse emails and SMS**. WhatsApp does not allow automatic posting to a Channel, so each morning use **Admin → Daily verses → Today**: copy the text or download the picture, and post it.
+
 ## Troubleshooting
 
 | Problem | Fix |
@@ -66,4 +76,6 @@ Post sermons and clips to the church's **YouTube** channel or **TikTok**, then a
 | Photos upload but look unchanged | The GD extension is off. Turn it on in PHP Configuration |
 | "That file is too big for the server" | Raise `upload_max_filesize` and `post_max_size` |
 | Emails are not picked up | Check the cron job. In Admin → Emailed updates press *Check mailbox now* to see the error. Check the sender is on the approved list |
+| Verse emails not going out | Check *Send verse emails* is on in Settings, the cron job runs, and the letter is not *paused* or *waiting for approval* in Admin → Verse emails & SMS |
+| SMS shows "failed" | Check the Africa's Talking credit, the username and key, and that the sender ID is approved |
 | Replies from the website go to spam | Make sure SPF/DKIM are on for the domain (hPanel → Emails → DNS settings) |

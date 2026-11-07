@@ -32,12 +32,23 @@ $checks = [
     'OpenSSL (mailbox)' => extension_loaded('openssl'),
     'fileinfo (file types)' => class_exists('finfo'),
     'mbstring' => function_exists('mb_substr'),
+    'FreeType (verse pictures)' => function_exists('imagettftext'),
+    'zlib (Bible text)' => function_exists('gzfile'),
     'app_key set' => strlen((string)config('app_key')) >= 32,
 ];
 $list = '<ul>' . implode('', array_map(fn($k, $ok) => '<li>' . ($ok ? '✅' : '❌') . ' ' . $h($k) . '</li>', array_keys($checks), $checks)) . '</ul>';
 if (!$checks['Database connection']) page($list . '<p>Fix the database details in phomi-config.php, then reload this page.</p>');
 
 install_schema();
+if (!bible_ready()) {
+    @set_time_limit(300);
+    try {
+        bible_import();
+    } catch (Throwable $e) {
+        error_log('PHOMI Bible import: ' . $e->getMessage());
+    }
+}
+$list .= '<ul><li>' . (bible_ready() ? '✅ Bible text loaded (KJV and WEB)' : '❌ Bible text not loaded yet: reload this page to try again') . '</li></ul>';
 $uploads = uploads_ready(date('Y/m'));
 $hasAdmin = (int)(row('SELECT COUNT(*) AS n FROM admins')['n'] ?? 0) > 0;
 

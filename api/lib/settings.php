@@ -24,6 +24,14 @@ const SETTING_DEFAULTS = [
     'youtube' => '',
     'tiktok' => '',
     'instagram' => '',
+    'whatsapp_channel' => '',
+
+    // Bible and verse emails
+    'bible_default' => 'kjv', // 'kjv' or 'web'
+    'letters_on' => '0', // '1' sends the verse emails
+    'letters_mode' => 'auto', // 'auto' sends planned emails unless paused; 'approve' waits for an admin each time
+    'letters_time' => '06:00',
+    'sms_on' => '0', // '1' sends the daily verse by SMS (needs an SMS account in phomi-config.php)
     'momo_mtn_number' => '',
     'momo_mtn_name' => '',
     'momo_airtel_number' => '',
@@ -36,7 +44,7 @@ const SETTING_DEFAULTS = [
 // Settings that are safe to show to every visitor
 const PUBLIC_SETTINGS = [
     'times_sunday', 'times_prayer_day', 'times_prayer_time', 'times_bible_day', 'times_bible_time',
-    'whatsapp', 'phones', 'email', 'facebook', 'youtube', 'tiktok', 'instagram', 'momo_mtn_number', 'momo_mtn_name', 'momo_airtel_number', 'momo_airtel_name',
+    'whatsapp', 'phones', 'email', 'facebook', 'youtube', 'tiktok', 'instagram', 'whatsapp_channel', 'bible_default', 'momo_mtn_number', 'momo_mtn_name', 'momo_airtel_number', 'momo_airtel_name',
     'bank_name', 'bank_account', 'bank_swift',
 ];
 

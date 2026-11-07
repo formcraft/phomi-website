@@ -4,7 +4,7 @@ Run from the repo root:  python3 api/tests/test_api.py
 Needs: php 8.1+ (pdo_sqlite, gd, curl, mbstring, fileinfo). No MySQL, payment account or API key needed:
 payments use the 'mock' provider and email is read from a fake mailbox.
 """
-import http.cookiejar, json, os, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.parse, urllib.request
+import http.cookiejar, json, re, os, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.parse, urllib.request
 from email.message import EmailMessage
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -23,6 +23,7 @@ with open(cfg_path, 'w') as f:
   'cron_token' => 'cron-token-123', 'db' => ['dsn' => 'sqlite:{tmp}/test.db', 'user' => null, 'pass' => null],
   'uploads_dir' => '{web}/uploads', 'uploads_url' => '/uploads', 'mail_log' => '{mail_log}',
   'mail_from' => 'church@phomi.test', 'payments' => ['provider' => 'mock', 'min' => 500, 'max' => 5000000, 'yo' => [], 'flutterwave' => []],
+  'sms' => ['provider' => 'mock', 'log' => '{tmp}/sms.log'],
 ];""")
 
 env = dict(os.environ, PHOMI_CONFIG=cfg_path)
@@ -63,6 +64,14 @@ def call(method, path, data=None, form=None, files=None, admin=True, raw=False):
         return code, {'_raw': text[:400]}
 
 
+def base64_subjects(log):
+    import base64
+    out = []
+    for m in re.finditer(r'Subject: =\?UTF-8\?B\?([^?]+)\?=', log):
+        out.append(base64.b64decode(m.group(1)).decode('utf-8', 'replace'))
+    return '\n'.join(out)
+
+
 def check(name, cond, info=''):
     print(('PASS ' if cond else 'FAIL ') + name + ('' if cond else f'  -> {info}'))
     if not cond:
@@ -97,6 +106,7 @@ try:
     check('install creates the first admin', 'All set' in page, page[:300])
     code, page = call('GET', '/api/install.php?token=install-token-123', admin=False, raw=True)
     check('install is safe to run again', 'already exists' in page, page[:300])
+    check('installer loads the Bible text', 'Bible text loaded' in page, page[:600])
 
     # ---- Sign in ----
     code, r = call('GET', '/api/admin/me')
@@ -255,6 +265,83 @@ try:
     code, r = call('POST', f"/api/admin/changes/{edit['id']}/undo", {})
     code, c = call('GET', '/api/content', admin=False)
     check('undo reverses an edit', code == 200 and any(x['id'] == sid and x['scripture'] == 'Mark 11:22-24' for x in c['sermons']), r)
+
+    # ---- Bible and Verse of the Day ----
+    code, r = call('GET', '/api/bible/kjv/43/3', admin=False)
+    check('Bible chapter loads (John 3, KJV)', code == 200 and len(r['verses']) == 36 and r['verses'][15]['t'].startswith('For God so loved the world'), r.get('verses', [])[:1])
+    code, r = call('GET', '/api/bible/web/19/23', admin=False)
+    check('World English Bible loads (Psalm 23)', code == 200 and 'Yahweh is my shepherd' in r['verses'][0]['t'], r.get('verses', [])[:1])
+    code, r = call('GET', '/api/bible/kjv/70/1', admin=False)
+    check('unknown book refused', code == 404, r)
+    code, r = call('GET', '/api/bible/search?q=' + urllib.parse.quote('1 cor 13:4-7'), admin=False)
+    check('reference search opens the passage', code == 200 and r['passage']['ref'] == '1 Corinthians 13:4-7' and r['highlight'] == [4, 5, 6, 7], r.get('passage'))
+    code, r = call('GET', '/api/bible/search?q=' + urllib.parse.quote('living water') + '&tr=kjv', admin=False)
+    check('word search finds verses', code == 200 and r['total'] >= 2 and any(x['ref'] == 'John 4:10' for x in r['results']), r.get('total'))
+    code, c = call('GET', '/api/content', admin=False)
+    vd = c.get('verse', {}).get('day', {})
+    check('site content carries the Verse of the Day and Week', vd.get('text') and vd.get('ref') and c['verse']['week'].get('text'), c.get('verse'))
+    code, img = call('GET', vd['image'] + '&s=story', admin=False, raw=True)
+    check('verse picture is drawn', code == 200, code)
+
+    code, r = call('POST', '/api/admin/r/verses', {'show_on': time.strftime('%Y-%m-%d'), 'kind': 'day', 'reference': 'Not a verse 99', 'theme': 'x'})
+    check('planned verse needs a real reference', code == 422, r)
+    code, r = call('POST', '/api/admin/r/verses', {'show_on': time.strftime('%Y-%m-%d'), 'kind': 'day', 'reference': 'ps 23:1-3', 'theme': 'Trust', 'note': 'Read it slowly today.'})
+    check('admin plans today\'s verse', code == 200 and r['item']['reference'] == 'Psalm 23:1-3', r)
+    vid = r['item']['id']
+    code, c = call('GET', '/api/content', admin=False)
+    check('planned verse shows on the site', c['verse']['day']['ref'] == 'Psalm 23:1-3' and c['verse']['day']['note'] == 'Read it slowly today.', c['verse']['day'])
+    code, u = call('GET', '/api/admin/verses/upcoming?days=14')
+    check('admin sees the coming verses', code == 200 and len(u['days']) == 14 and u['days'][0]['planned'] and not u['days'][1]['planned'], u.get('days', [])[:2])
+
+    # ---- Verse emails and SMS ----
+    code, r = call('POST', '/api/subscribe', {'email': 'not-an-email', 'daily': True}, admin=False)
+    check('sign-up needs a real email', code == 422, r)
+    code, r = call('POST', '/api/subscribe', {'name': 'Grace', 'email': 'grace@example.com', 'daily': True, 'weekly': True, 'phone': '0772 111222', 'sms': True}, admin=False)
+    check('sign-up asks to confirm by email', code == 200 and 'Confirm' in r['message'] and 'SMS' in r['message'], r)
+    log = open(mail_log).read()
+    m = re.search(r'/api/subscription\?t=([a-f0-9]+)&do=confirm', log)
+    check('confirmation email sent', 'To: grace@example.com' in log and m, log[-400:])
+    token = m.group(1) if m else ''
+    code, page = call('GET', f'/api/subscription?t={token}&do=confirm', admin=False, raw=True)
+    check('opening the link alone confirms nothing', 'Confirm' in page and code == 200, page[:200])
+    code, page = call('POST', '/api/subscription', form={'t': token, 'do': 'confirm'}, admin=False, raw=True)
+    check('pressing Confirm signs them up', 'You are signed up' in page, page[:400])
+    code, r = call('POST', '/api/subscribe', {'phone': '0701 999888', 'sms': True}, admin=False)
+    check('SMS-only sign-up', code == 200 and 'SMS' in r['message'], r)
+    code, r = call('POST', '/api/admin/r/subscribers', {'email': 'deacon@phomi.test', 'name': 'Deacon', 'daily': False, 'weekly': True, 'status': 'active'})
+    check('admin adds someone to the email list', code == 200 and r['item']['token'], r)
+    code, r = call('GET', '/api/admin/r/sms_contacts')
+    check('SMS list keeps numbers in one format', sorted(x['phone'] for x in r['items']) == ['+256701999888', '+256772111222'], r)
+
+    call('POST', '/api/admin/settings', {'letters_on': '1', 'letters_time': '00:00', 'sms_on': '1'})
+    code, L = call('GET', '/api/admin/letters')
+    todays = [l for l in L['items'] if l['for_date'] == time.strftime('%Y-%m-%d')]
+    check('today\'s verse emails are prepared', any(l['kind'] == 'day' for l in todays) and any(l['kind'] == 'sms' for l in todays), [(l['kind'], l['status']) for l in todays])
+    day_letter = next(l for l in todays if l['kind'] == 'day')
+    code, r = call('POST', f"/api/admin/letters/{day_letter['id']}/pause", {})
+    code, r = call('GET', '/api/cron/inbox?token=cron-token-123', admin=False)
+    log = open(mail_log).read()
+    check('a paused email is not sent', 'Verse of the Day: Psalm 23' not in base64_subjects(log), r)
+    code, r = call('POST', f"/api/admin/letters/{day_letter['id']}/resume", {})
+    code, r = call('GET', '/api/cron/inbox?token=cron-token-123', admin=False)
+    log = open(mail_log).read()
+    subj = base64_subjects(log)
+    check('the cron job sends the Verse of the Day email', r['letters']['sent'] >= 1 and 'Verse of the Day: Psalm 23:1-3' in subj, r)
+    check('verse emails carry a one-click unsubscribe', 'List-Unsubscribe-Post: List-Unsubscribe=One-Click' in log, '')
+    sms = open(os.path.join(tmp, 'sms.log')).read() if os.path.exists(os.path.join(tmp, 'sms.log')) else ''
+    check('the daily verse goes out by SMS', '+256772111222' in sms and 'Psalm 23:1-3' in sms, sms[:300])
+    code, r = call('GET', '/api/cron/inbox?token=cron-token-123', admin=False)
+    check('nobody gets the same email twice', r['letters']['sent'] == 0, r)
+    code, r = call('POST', '/api/admin/sms/send', {'phones': '0775 123456'})
+    sms = open(os.path.join(tmp, 'sms.log')).read()
+    check('admin sends today\'s verse to a number', code == 200 and r['sent'] == 1 and '+256775123456' in sms, r)
+    code, page = call('POST', '/api/subscription', form={'t': token, 'do': 'unsubscribe'}, admin=False, raw=True)
+    check('unsubscribe works', 'unsubscribed' in page, page[:300])
+    code, h = call('GET', '/api/admin/changes')
+    pv = next(i for i in h['items'] if i['table_name'] == 'verses' and i['action'] == 'create')
+    code, r = call('POST', f"/api/admin/changes/{pv['id']}/undo", {})
+    code, c = call('GET', '/api/content', admin=False)
+    check('undo removes a planned verse', code == 200 and c['verse']['day']['ref'] != 'Psalm 23:1-3', c['verse']['day']['ref'])
 
     # ---- Clean-up actions ----
     code, r = call('POST', '/api/admin/password', {'current': 'correct horse 1', 'password': 'short'})

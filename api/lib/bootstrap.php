@@ -47,3 +47,6 @@ require __DIR__ . '/mailer.php';
 require __DIR__ . '/mime.php';
 require __DIR__ . '/imap.php';
 require __DIR__ . '/ingest.php';
+require __DIR__ . '/bible.php';
+require __DIR__ . '/letters.php';
+require __DIR__ . '/sms.php';

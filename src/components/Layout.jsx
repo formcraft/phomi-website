@@ -92,6 +92,7 @@ function Footer() {
           <Link to="/about">About us</Link>
           <Link to="/ministries">Ministries</Link>
           <Link to="/sermons">Sermons</Link>
+          <Link to="/bible">Read the Bible</Link>
           <Link to="/events">Events</Link>
           <Link to="/gallery">Gallery</Link>
         </div>
@@ -99,6 +100,8 @@ function Footer() {
           <h2>Get involved</h2>
           <Link to="/give">Give</Link>
           <Link to="/prayer">Prayer requests</Link>
+          <Link to="/bible#bible-subscribe">Daily verse by email</Link>
+          {CHURCH.whatsappChannel && <a href={CHURCH.whatsappChannel} target="_blank" rel="noopener noreferrer">WhatsApp Channel</a>}
           <Link to="/ministries?tab=outreach">Join an outreach</Link>
           <Link to="/contact">Contact</Link>
         </div>

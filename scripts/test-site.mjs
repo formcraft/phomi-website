@@ -150,6 +150,38 @@ try {
   await page.waitForSelector('text=Sent. Thank you');
   check('prayer request sent to the office', true);
 
+  // Bible: open a reference, pick a verse, send it to a number, and sign up for the verse emails
+  await page.goto(`${BASE}/bible?ref=John+3:16`);
+  await page.waitForSelector('#v16.on');
+  check('Bible opens John 3:16 from a link', await page.isVisible('.chapter h2:has-text("John 3")'));
+  check('Verse of the Day shows on the Bible page', (await page.locator('.verse-card blockquote').count()) === 2);
+  await page.click('#v17');
+  await page.waitForSelector('.verse-bar >> text=John 3:17');
+  await page.click('.verse-bar >> text=Send to a number');
+  await page.fill('#bar-send-num', '0772 123456');
+  const sms = await page.getAttribute('.verse-bar a:has-text("SMS")', 'href');
+  const wa = await page.getAttribute('.verse-bar a:has-text("WhatsApp"):not(.btn-gold)', 'href');
+  check('send-to-number fills the SMS link', sms?.startsWith('sms:+256772123456?&body=') && sms.includes('John%203%3A17'), sms);
+  check('send-to-number fills the WhatsApp link', wa?.startsWith('https://wa.me/256772123456?text='), wa);
+  await page.click('.verse-bar >> text=Close');
+  await page.fill('#bible-q', 'living water');
+  await page.press('#bible-q', 'Enter');
+  await page.waitForSelector('.bible-results li:has-text("John 4:10")');
+  check('word search finds John 4:10', true);
+  await page.fill('#bible-subscribe-name', 'Ruth');
+  await page.fill('#bible-subscribe-email', 'ruth@phomi.test');
+  await page.click('#bible-subscribe button:has-text("Sign up")');
+  await page.waitForSelector('#bible-subscribe .ok');
+  check('verse email sign-up asks to confirm', /email/i.test(await page.textContent('#bible-subscribe .ok')));
+  await page.goto(`${BASE}/admin`);
+  await page.click('nav >> text=Daily verses');
+  await page.waitForSelector('.adm-verse');
+  check('admin Daily verses page lists the coming verses', (await page.locator('.adm-list li').count()) >= 35);
+  await shot(page, 'admin-verses');
+  await page.click('nav >> text=Email list');
+  await page.waitForSelector('text=ruth@phomi.test');
+  check('new sign-up waits in the admin email list', true);
+
   // Phone: giving with the PIN prompt
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const p2 = await phone.newPage();
@@ -172,7 +204,7 @@ try {
   await shot(p2, 'phone-give-done');
 
   // No sideways scrolling on a phone, and the admin works on a phone
-  for (const path of ['/', '/sermons', '/gallery', '/events', '/give', '/prayer', '/contact', '/admin']) {
+  for (const path of ['/', '/sermons', '/gallery', '/events', '/bible', '/give', '/prayer', '/contact', '/admin']) {
     await p2.goto(BASE + path);
     await p2.waitForTimeout(400);
     const over = await p2.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

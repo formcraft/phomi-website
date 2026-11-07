@@ -182,3 +182,70 @@ CREATE TABLE IF NOT EXISTS changes (
   undone_by VARCHAR(190) NOT NULL DEFAULT '',
   KEY changes_list (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- The Bible text (KJV and WEB), loaded by the installer from api/data/
+CREATE TABLE IF NOT EXISTS bible_verses (
+  translation VARCHAR(8) NOT NULL,
+  book TINYINT UNSIGNED NOT NULL,
+  chapter SMALLINT UNSIGNED NOT NULL,
+  verse SMALLINT UNSIGNED NOT NULL,
+  text TEXT NOT NULL,
+  PRIMARY KEY (translation, book, chapter, verse)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Verses the admin has planned for a day ('day') or for the week starting that Monday ('week')
+CREATE TABLE IF NOT EXISTS verses (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  show_on DATE NOT NULL,
+  kind VARCHAR(8) NOT NULL DEFAULT 'day',
+  reference VARCHAR(80) NOT NULL,
+  theme VARCHAR(80) NOT NULL DEFAULT '',
+  note TEXT NULL,
+  status VARCHAR(12) NOT NULL DEFAULT 'live',
+  source VARCHAR(12) NOT NULL DEFAULT 'admin',
+  created_at DATETIME NOT NULL,
+  KEY verses_day (kind, show_on)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- People who asked for the verse emails (confirmed by clicking the link in the first email)
+CREATE TABLE IF NOT EXISTS subscribers (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(190) NOT NULL,
+  name VARCHAR(120) NOT NULL DEFAULT '',
+  daily TINYINT NOT NULL DEFAULT 1,
+  weekly TINYINT NOT NULL DEFAULT 1,
+  status VARCHAR(12) NOT NULL DEFAULT 'pending',
+  token VARCHAR(64) NOT NULL DEFAULT '',
+  source VARCHAR(12) NOT NULL DEFAULT 'website',
+  created_at DATETIME NOT NULL,
+  confirmed_at DATETIME NULL,
+  UNIQUE KEY subscribers_email (email),
+  KEY subscribers_token (token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Each verse email: the daily verse or the weekly letter for one date
+CREATE TABLE IF NOT EXISTS letters (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  kind VARCHAR(8) NOT NULL,
+  for_date DATE NOT NULL,
+  note TEXT NULL,
+  status VARCHAR(12) NOT NULL DEFAULT 'scheduled',
+  send_after DATETIME NOT NULL,
+  cursor_id INT UNSIGNED NOT NULL DEFAULT 0,
+  sent_count INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  sent_at DATETIME NULL,
+  UNIQUE KEY letters_one (kind, for_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Phone numbers that asked for the Verse of the Day by SMS
+CREATE TABLE IF NOT EXISTS sms_contacts (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  phone VARCHAR(20) NOT NULL,
+  name VARCHAR(120) NOT NULL DEFAULT '',
+  daily TINYINT NOT NULL DEFAULT 1,
+  status VARCHAR(12) NOT NULL DEFAULT 'active',
+  source VARCHAR(12) NOT NULL DEFAULT 'website',
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY sms_phone (phone)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

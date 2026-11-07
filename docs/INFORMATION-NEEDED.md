@@ -66,6 +66,16 @@ The site is built to work with **Yo! Payments** (Ugandan, sends the MTN/Airtel P
 
 No AI service or API key is needed anywhere. The site runs on plain scripts.
 
+## 5b. Bible, verse emails and SMS
+
+| # | What | Notes |
+|---|------|-------|
+| 5b.1 | Who **chooses the verses** for coming days and weeks (or keep the built-in list) | Admin → Daily verses |
+| 5b.2 | **Send as planned or wait for approval** for each verse email, and the send time (now 06:00) | Admin → Settings → Bible, verse emails and SMS |
+| 5b.3 | The church's **WhatsApp Channel** link, and who posts the verse there each morning | Same place |
+| 5b.4 | Do we want **automatic SMS**? It needs a paid Africa's Talking account, SMS credit, and an approved sender ID such as "PHOMI". Without it, people can still send a verse from their own phone for free | `phomi-config.php` → sms |
+| 5b.5 | Hostinger's **emails-per-hour limit** for the plan, so the verse emails stay under it | `phomi-config.php` → letters_per_hour |
+
 ## 6. GitHub (automatic deploys)
 
 | # | What | Notes |

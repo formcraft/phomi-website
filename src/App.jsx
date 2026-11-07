@@ -6,6 +6,7 @@ import Home from './pages/Home.jsx';
 import About from './pages/About.jsx';
 import Ministries from './pages/Ministries.jsx';
 import Sermons from './pages/Sermons.jsx';
+import Bible from './pages/Bible.jsx';
 import Events from './pages/Events.jsx';
 import Gallery from './pages/Gallery.jsx';
 import Prayer from './pages/Prayer.jsx';
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="about" element={<About />} />
           <Route path="ministries" element={<Ministries />} />
           <Route path="sermons" element={<Sermons />} />
+          <Route path="bible" element={<Bible />} />
           <Route path="events" element={<Events />} />
           <Route path="gallery" element={<Gallery />} />
           <Route path="prayer" element={<Prayer />} />

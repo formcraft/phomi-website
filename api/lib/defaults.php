@@ -44,6 +44,18 @@ return [
     ],
 
 
+    // Verse of the Day by SMS (optional, paid per message): 'africastalking', 'mock' (local testing only) or '' (off)
+    'sms' => [
+        'provider' => '',
+        'username' => '',   // Africa's Talking app username ('sandbox' for testing)
+        'api_key' => '',
+        'sender_id' => '',  // approved sender name, e.g. PHOMI; leave blank to use the shared number
+        'sandbox' => false,
+    ],
+
+    // Verse emails: most the mail server may send per hour (Hostinger plans allow roughly 100–300; check yours)
+    'letters_per_hour' => 100,
+
     // Sender for replies and alerts. Hostinger mail works with PHP mail() when this is a mailbox on the domain.
     'mail_from' => 'church@pottershouseoutreachministriesinternational.com',
 ];

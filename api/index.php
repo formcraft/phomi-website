@@ -59,6 +59,47 @@ function route(string $method, string $path): void
         json_out(save_message(substr($path, 1), body()));
         return;
     }
+    // ---------- Bible and verses ----------
+    if ($method === 'GET' && ($seg[0] ?? '') === 'bible' && count($seg) === 4) {
+        header('Cache-Control: public, max-age=86400');
+        json_out(bible_chapter($seg[1], (int)$seg[2], (int)$seg[3]));
+        return;
+    }
+    if ($is('GET', '/bible/search')) {
+        $q = trim((string)($_GET['q'] ?? ''));
+        $tr = (string)($_GET['tr'] ?? '');
+        $p = bible_parse_ref($q);
+        if ($p && ($pass = bible_passage($q, $tr))) {
+            json_out(['passage' => $pass, 'chapter' => bible_chapter($pass['translation'], $p[0], $p[1]), 'highlight' => $p[2] === null ? [] : range($p[2], $p[3])]);
+        } else {
+            rate_limit('search:' . client_ip(), 60, 5);
+            json_out(bible_search($q, $tr));
+        }
+        return;
+    }
+    if ($is('GET', '/verse')) {
+        $d = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_GET['d'] ?? '')) ? $_GET['d'] : date('Y-m-d');
+        json_out(['day' => verse_for($d, 'day', (string)($_GET['tr'] ?? '')), 'week' => verse_for($d, 'week', (string)($_GET['tr'] ?? ''))]);
+        return;
+    }
+    if ($is('GET', '/verse/image')) {
+        $d = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_GET['d'] ?? '')) ? $_GET['d'] : date('Y-m-d');
+        if (abs(strtotime($d) - time()) > 120 * 86400) throw new ApiError(404, 'Pictures are made for dates near today only.');
+        $file = verse_image($d, (string)($_GET['k'] ?? 'day'), (string)($_GET['s'] ?? 'post'));
+        header('Content-Type: image/jpeg');
+        header('Cache-Control: public, max-age=3600');
+        if (isset($_GET['download'])) header('Content-Disposition: attachment; filename="verse-' . basename($file) . '"');
+        readfile($file);
+        return;
+    }
+    if ($is('POST', '/subscribe')) {
+        json_out(subscribe_start(body()));
+        return;
+    }
+    if ($path === '/subscription') {
+        subscription_page($method);
+        return;
+    }
     if ($path === '/inbox/approve') {
         approve_page($method);
         return;
@@ -66,7 +107,13 @@ function route(string $method, string $path): void
     if ($is('GET', '/cron/inbox')) {
         $t = (string)config('cron_token');
         if ($t === '' || !hash_equals($t, (string)($_GET['token'] ?? ''))) throw new ApiError(403, 'Bad token.');
-        json_out(ingest_run());
+        try {
+            $r = ingest_run();
+        } catch (Throwable $e) {
+            $r = ['ok' => false, 'message' => $e->getMessage()];
+        }
+        $r['letters'] = letters_tick();
+        json_out($r);
         return;
     }
 
@@ -171,6 +218,67 @@ function route(string $method, string $path): void
         json_out(inbox_apply($it, $seg[3] === 'approve'));
         return;
     }
+    if ($method === 'GET' && $sub === '/verses/upcoming') {
+        $days = max(7, min(62, (int)($_GET['days'] ?? 35)));
+        $out = [];
+        for ($i = 0; $i < $days; $i++) {
+            $d = date('Y-m-d', strtotime("+$i days"));
+            $out[] = verse_for($d, 'day');
+        }
+        $weeks = [];
+        for ($i = 0; $i < 6; $i++) $weeks[] = verse_for(date('Y-m-d', strtotime("+$i weeks")), 'week');
+        json_out(['days' => $out, 'weeks' => $weeks, 'bible' => bible_ready(), 'channel' => setting('whatsapp_channel')]);
+        return;
+    }
+    if ($method === 'POST' && $sub === '/bible/import') {
+        @set_time_limit(300);
+        json_out(['ok' => true, 'loaded' => bible_import()]);
+        return;
+    }
+    if ($method === 'GET' && $sub === '/letters') {
+        json_out(letters_admin_list());
+        return;
+    }
+    if (($seg[1] ?? '') === 'letters' && isset($seg[2], $seg[3])) {
+        if ($method === 'GET' && $seg[3] === 'preview') {
+            $l = row('SELECT * FROM letters WHERE id = ?', [(int)$seg[2]]);
+            if (!$l) throw new ApiError(404, 'Not found.');
+            header('Content-Type: text/html; charset=utf-8');
+            header("Content-Security-Policy: default-src 'none'; img-src * data:; style-src 'unsafe-inline'");
+            echo letter_render($l, ['name' => $admin['name'] ?? '', 'token' => 'preview', 'email' => $admin['email']])[2];
+            return;
+        }
+        if ($method === 'POST') {
+            json_out(letter_action((int)$seg[2], $seg[3], $admin));
+            return;
+        }
+    }
+    if ($method === 'POST' && $sub === '/sms/send') {
+        $b = body();
+        $phones = array_filter(array_map('sms_phone', preg_split('/[,;\n]+/', (string)($b['phones'] ?? ''))));
+        if (!$phones) throw new ApiError(422, 'Add at least one phone number.');
+        $text = trim((string)($b['text'] ?? '')) ?: sms_verse_text(verse_for(date('Y-m-d'), 'day'));
+        $n = sms_send(array_slice($phones, 0, 50), mb_substr($text, 0, 459));
+        log_change('settings', 'sms', null, null, null, "Sent an SMS to $n number" . ($n === 1 ? '' : 's'));
+        json_out(['ok' => true, 'sent' => $n]);
+        return;
+    }
+    if ($method === 'GET' && $sub === '/sms_contacts.csv') {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="phomi-sms-list.csv"');
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['phone', 'name', 'daily', 'status', 'added']);
+        foreach (rows('SELECT phone, name, daily, status, created_at FROM sms_contacts ORDER BY id') as $r) fputcsv($out, array_values($r));
+        return;
+    }
+    if ($method === 'GET' && $sub === '/subscribers.csv') {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="phomi-email-list.csv"');
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['email', 'name', 'daily', 'weekly', 'status', 'signed up', 'confirmed']);
+        foreach (rows('SELECT email, name, daily, weekly, status, created_at, confirmed_at FROM subscribers ORDER BY id') as $r) fputcsv($out, array_values($r));
+        return;
+    }
     if ($method === 'GET' && $sub === '/changes') {
         json_out(['items' => history_list((int)($_GET['limit'] ?? 200))]);
         return;
@@ -254,6 +362,9 @@ function admin_stats(): array
     $month = date('Y-m-01 00:00:00');
     return [
         'review' => $c("SELECT COUNT(*) AS n FROM inbox WHERE status = 'review'"),
+        'subscribers' => $c("SELECT COUNT(*) AS n FROM subscribers WHERE status = 'active'"),
+        'letters_on' => setting('letters_on') === '1',
+        'bible' => bible_ready(),
         'sermons' => $c("SELECT COUNT(*) AS n FROM sermons WHERE status = 'live'"),
         'photos' => $c("SELECT COUNT(*) AS n FROM photos WHERE status = 'live'"),
         'events' => $c("SELECT COUNT(*) AS n FROM events WHERE status = 'live' AND starts_at >= ?", [date('Y-m-d 00:00:00')]),

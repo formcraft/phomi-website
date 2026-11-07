@@ -9,6 +9,8 @@ It lives at **https://pottershouseoutreachministriesinternational.com** and is h
 - **Automatic updates:** approved people email the church update address with a tag such as `Sermon:` or `Photo: Outreach`. An admin approves each one (in the admin page or with a one-tap link) before it shows on the site.
 - **Videos:** YouTube, TikTok and Facebook links play right on the page; uploaded MP4 clips work too.
 - **No AI at runtime:** everything runs on plain PHP scripts and rules. Nothing needs an AI service or an API key to work.
+- **Bible:** the whole Bible (KJV and World English Bible, both public domain) at `/bible`, with search, a Verse of the Day and a Verse of the Week from a planned list (never random), share pictures, and *Send to a number* by SMS or WhatsApp from the reader's own phone.
+- **Verse emails and SMS:** members sign up for a morning verse email, a Monday letter (Verse of the Week, latest sermon, coming events) and an optional SMS. Sent by the cron job; an admin can pause, approve or add a message to each one.
 - **Giving:** the giver types their MTN or Airtel number and gets the Mobile Money PIN prompt on their phone (Yo! Payments or Flutterwave). Until a payment account is live, the page falls back to the dial code.
 
 **Launching?** Start with [docs/INFORMATION-NEEDED.md](docs/INFORMATION-NEEDED.md), then follow [docs/SETUP.md](docs/SETUP.md).
@@ -48,6 +50,9 @@ If the backend can't be reached, the site still works with the built-in content 
 | Undo a change (edit, delete, approval, settings) | **Admin → History & undo** |
 | YouTube channel, TikTok, Facebook, Instagram links | **Admin → Settings → Video and social pages** |
 | Service times, phone numbers, WhatsApp, Mobile Money and bank details | **Admin → Settings** (overrides `src/data.js`) |
+| Verse of the Day / Week for a date | **Admin → Daily verses** (otherwise the built-in list in `api/lib/bible.php`) |
+| Verse emails and SMS: on/off, send time, approval | **Admin → Settings → Bible, verse emails and SMS**; each letter in **Admin → Verse emails & SMS** |
+| Email list and SMS list | **Admin → Email list / SMS list** (CSV download on each) |
 | Approved senders and who gets alerts | **Admin → Approved senders / Settings** |
 | Built-in photos and videos | `public/img/`, `public/video/` + `src/data.js` → `PHOTOS`, `CLIPS` |
 | Page text | `src/pages/*.jsx` |

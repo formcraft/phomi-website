@@ -17,6 +17,10 @@ const SECTIONS = [
   ['events', 'Events', 'clock'],
   ['announcements', 'Announcements', 'bell'],
   ['testimonies', 'Testimonies', 'heart'],
+  ['verses', 'Daily verses', 'book'],
+  ['letters', 'Verse emails & SMS', 'mail'],
+  ['subscribers', 'Email list', 'users'],
+  ['sms_contacts', 'SMS list', 'phone'],
   ['gifts', 'Giving', 'gift'],
   ['messages', 'Prayer & messages', 'chat'],
   ['senders', 'Approved senders', 'users'],
@@ -45,7 +49,7 @@ function Note({ kind = 'info', children }) {
 }
 
 function Badge({ s }) {
-  return <span className={`adm-badge ${s}`}>{{ live: 'Live', review: 'Waiting', hidden: 'Hidden', published: 'Published', rejected: 'Rejected', ignored: 'Ignored', error: 'Error', successful: 'Received', pending: 'Pending', failed: 'Failed' }[s] || s}</span>;
+  return <span className={`adm-badge ${s}`}>{{ live: 'Live', review: 'Waiting', hidden: 'Hidden', published: 'Published', rejected: 'Rejected', scheduled: 'Scheduled', waiting: 'Needs approval', paused: 'Paused', sending: 'Sending', sent: 'Sent', skipped: 'Skipped', active: 'Active', unsubscribed: 'Unsubscribed', stopped: 'Stopped', ignored: 'Ignored', error: 'Error', successful: 'Received', pending: 'Pending', failed: 'Failed' }[s] || s}</span>;
 }
 
 // ---------- Sign in ----------
@@ -147,12 +151,12 @@ function Field({ name, f, value, onChange }) {
 
 // ---------- Generic section (sermons, photos, events, announcements, testimonies, senders) ----------
 
-const TITLE_KEY = { sermons: 'title', videos: 'title', photos: 'caption', events: 'title', announcements: 'title', testimonies: 'title', senders: 'email' };
-const DATE_KEY = { sermons: 'preached_on', videos: 'posted_on', photos: 'taken_on', events: 'starts_at', announcements: 'ends_on', testimonies: 'created_at', senders: 'created_at' };
+const TITLE_KEY = { verses: 'reference', subscribers: 'email', sms_contacts: 'phone', sermons: 'title', videos: 'title', photos: 'caption', events: 'title', announcements: 'title', testimonies: 'title', senders: 'email' };
+const DATE_KEY = { verses: 'show_on', subscribers: 'created_at', sms_contacts: 'created_at', sermons: 'preached_on', videos: 'posted_on', photos: 'taken_on', events: 'starts_at', announcements: 'ends_on', testimonies: 'created_at', senders: 'created_at' };
 
-function Editor({ res, def, item, onSaved, onCancel }) {
+function Editor({ res, def, item, initial, onSaved, onCancel }) {
   const blank = useMemo(() => Object.fromEntries(Object.entries(def.fields).map(([k, f]) => [k, f.default ?? (f.type === 'bool' ? 0 : '')])), [def]);
-  const [v, setV] = useState(item ? { ...blank, ...item } : blank);
+  const [v, setV] = useState(item ? { ...blank, ...item } : { ...blank, ...initial });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const save = async (e) => {
@@ -249,6 +253,7 @@ function ResourceSection({ res, schema }) {
     return <Editor res={res} def={def} item={edit === 'new' ? null : edit} onCancel={() => setEdit(null)} onSaved={() => { setEdit(null); load(); }} />;
   }
   const hasStatus = !!def.fields.status;
+  const canPublish = !!def.fields.status?.options?.includes('live');
   return (
     <>
       <div className="adm-head">
@@ -258,6 +263,10 @@ function ResourceSection({ res, schema }) {
       {res === 'senders' && (
         <Note>People on this list can email updates to the church update address. Others are ignored. Every emailed update waits in <a href="#inbox">Emailed updates</a> until an admin approves it.</Note>
       )}
+      {res === 'subscribers' && (
+        <Note>People who signed up for the verse emails. New sign-ups show as <b>pending</b> until they press Confirm in the first email. <a href="/api/admin/subscribers.csv">Download the list (CSV)</a></Note>
+      )}
+      {res === 'sms_contacts' && <SmsTools />}
       {res === 'videos' && (
         <Note>Paste a YouTube, TikTok or Facebook video link, or upload a short MP4. Videos show under Recent Moments on the Sermons and Home pages.</Note>
       )}
@@ -266,7 +275,8 @@ function ResourceSection({ res, schema }) {
         <input type="search" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search" />
         {hasStatus && (
           <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Show">
-            <option value="">All</option><option value="live">Live</option><option value="review">Waiting for approval</option><option value="hidden">Hidden</option>
+            <option value="">All</option>
+            {def.fields.status.options.map((o) => <option key={o} value={o}>{{ live: 'Live', review: 'Waiting for approval', hidden: 'Hidden' }[o] || o[0].toUpperCase() + o.slice(1)}</option>)}
           </select>
         )}
       </div>
@@ -280,15 +290,18 @@ function ResourceSection({ res, schema }) {
               <div className="txt">
                 <strong>{it[TITLE_KEY[res]] || <em>No caption</em>}</strong>
                 <span>
-                  {[res === 'photos' || res === 'videos' ? it.category : null, res === 'videos' ? linkName(it) : null, res === 'sermons' ? it.preacher : null, res === 'senders' ? it.name : null,
+                  {[res === 'verses' ? (it.kind === 'week' ? 'Verse of the Week' : 'Verse of the Day') : null, res === 'verses' ? it.theme : null,
+                    res === 'subscribers' ? [it.name, Number(it.daily) ? 'daily' : null, Number(it.weekly) ? 'weekly' : null, it.status].filter(Boolean).join(', ') : null,
+                    res === 'sms_contacts' ? [it.name, it.status].filter(Boolean).join(', ') : null,
+                    res === 'photos' || res === 'videos' ? it.category : null, res === 'videos' ? linkName(it) : null, res === 'sermons' ? it.preacher : null, res === 'senders' ? it.name : null,
                     DATE_KEY[res] === 'starts_at' ? when(it.starts_at) : day(it[DATE_KEY[res]]),
                     it.source === 'email' ? 'by email' : null].filter(Boolean).join(' · ')}
                 </span>
               </div>
               {hasStatus && <Badge s={it.status} />}
               <div className="acts">
-                {hasStatus && it.status !== 'live' && <button className="adm-btn small" onClick={() => setLive(it, 'live')}>Publish</button>}
-                {hasStatus && it.status === 'live' && <button className="adm-btn small ghost" onClick={() => setLive(it, 'hidden')}>Hide</button>}
+                {canPublish && it.status !== 'live' && <button className="adm-btn small" onClick={() => setLive(it, 'live')}>Publish</button>}
+                {canPublish && it.status === 'live' && <button className="adm-btn small ghost" onClick={() => setLive(it, 'hidden')}>Hide</button>}
                 <button className="adm-icon" onClick={() => setEdit(it)} aria-label="Edit"><Icon name="edit" size={18} /></button>
                 <button className="adm-icon" onClick={() => remove(it)} aria-label="Delete"><Icon name="trash" size={18} /></button>
               </div>
@@ -500,6 +513,14 @@ const SETTING_GROUPS = [
     ['whatsapp', 'WhatsApp number', 'text', '+256 775 672 762'],
     ['email', 'Public email address', 'email', 'church@pottershouseoutreachministriesinternational.com']
   ]],
+  ['Bible, verse emails and SMS', 'The Verse of the Day comes from Daily verses. Emails go to the Email list; SMS go to the SMS list.', [
+    ['bible_default', 'Bible translation shown first', 'select:kjv=King James Version (KJV)|web=World English Bible (WEB)', ''],
+    ['letters_on', 'Send the verse emails', 'select:0=Off|1=On', ''],
+    ['letters_mode', 'Before each email goes out', 'select:auto=Send as planned (you can pause any email)|approve=Wait for an admin to approve each one', ''],
+    ['letters_time', 'Send at (Uganda time, 24-hour)', 'text', '06:00'],
+    ['sms_on', 'Send the daily verse by SMS (needs an SMS account)', 'select:0=Off|1=On', ''],
+    ['whatsapp_channel', 'Church WhatsApp Channel link', 'url', 'https://whatsapp.com/channel/…']
+  ]],
   ['Video and social pages', 'Links to the church pages. They show in the footer and on the Sermons page.', [
     ['youtube', 'YouTube channel', 'url', 'https://www.youtube.com/@yourchurch'],
     ['tiktok', 'TikTok page', 'url', 'https://www.tiktok.com/@yourchurch'],
@@ -650,6 +671,164 @@ function Account({ admin, onOut }) {
   );
 }
 
+// ---------- Daily verses ----------
+
+function Verses({ schema }) {
+  const [d, setD] = useState(null);
+  const [edit, setEdit] = useState(null);
+  const [info, setInfo] = useState(null);
+  const [tick, setTick] = useState(0);
+  const load = useCallback(() => api('/admin/verses/upcoming?days=35').then(setD).catch((x) => setInfo({ kind: 'error', text: x.message })), []);
+  useEffect(() => { load(); }, [load, tick]);
+  const importBible = async () => {
+    setInfo({ kind: 'info', text: 'Loading the Bible text. This takes up to a minute…' });
+    try { await api('/admin/bible/import', { method: 'POST', body: {} }); setInfo({ kind: 'ok', text: 'The Bible text is loaded.' }); load(); } catch (x) { setInfo({ kind: 'error', text: x.message }); }
+  };
+  if (edit) {
+    return <Editor res="verses" def={schema.resources.verses} item={null} initial={edit} onCancel={() => setEdit(null)} onSaved={() => { setEdit(null); setTick((t) => t + 1); }} />;
+  }
+  if (!d) return info ? <Note kind={info.kind}>{info.text}</Note> : <p>Loading…</p>;
+  const today = d.days[0];
+  const text = today?.text ? `*Verse of the Day*\n\n“${today.text}”\n${today.ref} (${today.translation.toUpperCase()})\n\n${window.location.origin}/bible?ref=${encodeURIComponent(today.ref)}` : '';
+  return (
+    <>
+      <div className="adm-head"><h1>Daily verses</h1></div>
+      <Note>Each day shows the verse you planned for it. Days you haven't planned take the next verse from the church's built-in list of {'252'} verses (faith, hope, prayer, healing and more), so nothing is random. Press <b>Change</b> to choose a different verse or add a word from the pastor.</Note>
+      {info && <Note kind={info.kind}>{info.text}</Note>}
+      {!d.bible && <div className="adm-card"><p>The Bible text is not loaded yet.</p><button className="adm-btn primary" onClick={importBible}>Load the Bible text</button></div>}
+      {today?.text && (
+        <section className="adm-card">
+          <h2>Today: post it on WhatsApp and Facebook</h2>
+          <p className="adm-verse">“{today.text}” <b>{today.ref}</b></p>
+          <div className="adm-row wrap">
+            <button className="adm-btn" onClick={() => navigator.clipboard?.writeText(text).then(() => setInfo({ kind: 'ok', text: 'Copied. Paste it into the WhatsApp Channel or a group.' }), () => {})}>Copy the text</button>
+            <a className="adm-btn" href={`${today.image}&s=story&download=1`}>Picture for status (tall)</a>
+            <a className="adm-btn" href={`${today.image}&s=post&download=1`}>Picture for Facebook</a>
+            <a className="adm-btn" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">Open WhatsApp</a>
+            {d.channel && <a className="adm-btn" href={d.channel} target="_blank" rel="noreferrer">Open our Channel</a>}
+          </div>
+          <div className="adm-pics"><img src={`${today.image}&s=post`} alt="Today's verse picture" loading="lazy" /></div>
+        </section>
+      )}
+      <section className="adm-card">
+        <h2>Verse of the Week</h2>
+        <ul className="adm-list">
+          {d.weeks.map((w) => (
+            <li key={w.date}>
+              <div className="txt"><strong>{w.ref} · {w.theme}</strong><span>Week of {day(w.date)} · {w.planned ? 'planned' : 'from the built-in list'}</span></div>
+              <div className="acts"><button className="adm-btn small ghost" onClick={() => setEdit({ show_on: w.date, kind: 'week', reference: w.ref, theme: w.theme })}>Change</button></div>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="adm-card">
+        <h2>Verse of the Day, next 5 weeks</h2>
+        <ul className="adm-list">
+          {d.days.map((v) => (
+            <li key={v.date}>
+              <div className="txt"><strong>{day(v.date)}: {v.ref}</strong><span>{v.theme} · {v.planned ? 'planned' : 'built-in list'} · {(v.text || '').slice(0, 90)}{(v.text || '').length > 90 ? '…' : ''}</span></div>
+              <div className="acts"><button className="adm-btn small ghost" onClick={() => setEdit({ show_on: v.date, kind: 'day', reference: v.ref, theme: v.theme })}>Change</button></div>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <ResourceSection res="verses" schema={schema} />
+    </>
+  );
+}
+
+// ---------- Verse emails & SMS ----------
+
+const LETTER_KIND = { day: 'Verse of the Day email', week: 'Weekly letter', sms: 'Verse of the Day SMS' };
+
+function Letters() {
+  const [d, setD] = useState(null);
+  const [info, setInfo] = useState(null);
+  const [note, setNote] = useState(null); // { id, text }
+  const load = useCallback(() => api('/admin/letters').then(setD).catch((x) => setInfo({ kind: 'error', text: x.message })), []);
+  useEffect(() => { load(); }, [load]);
+  const act = async (l, doWhat, body = {}) => {
+    try {
+      const r = await api(`/admin/letters/${l.id}/${doWhat}`, { method: 'POST', body });
+      setInfo(r.message ? { kind: 'ok', text: r.message } : null);
+    } catch (x) {
+      setInfo({ kind: 'error', text: x.message });
+    }
+    load();
+  };
+  if (!d) return info ? <Note kind={info.kind}>{info.text}</Note> : <p>Loading…</p>;
+  const today = new Date().toISOString().slice(0, 10);
+  const s = d.subscribers;
+  return (
+    <>
+      <div className="adm-head"><h1>Verse emails &amp; SMS</h1><a className="adm-btn" href="#settings">Settings</a></div>
+      <div className="adm-stats">
+        <a href="#subscribers"><b>{s.active}</b><span>on the email list</span></a>
+        <a href="#subscribers"><b>{s.daily}</b><span>get the daily verse</span></a>
+        <a href="#subscribers"><b>{s.weekly}</b><span>get the weekly letter</span></a>
+        <a href="#sms_contacts"><b>{d.sms.contacts}</b><span>on the SMS list</span></a>
+      </div>
+      {!d.on && <Note>Verse emails are <b>off</b>. Turn them on in <a href="#settings">Settings</a> once the website email works.</Note>}
+      {d.on && <Note>Emails go out at {d.time} each day{d.mode === 'approve' ? ', after an admin approves each one' : ' unless you pause them'}. Up to {d.per_hour} emails are sent per hour, so a long list takes a little while.</Note>}
+      {!d.sms.provider && <Note>SMS can't be sent automatically until the church opens an SMS account (see the setup guide). Until then, use the <a href="#sms_contacts">SMS list</a> to keep numbers, and the <b>Send to a number</b> button on the website.</Note>}
+      {info && <Note kind={info.kind}>{info.text}</Note>}
+      <ul className="adm-list">
+        {d.items.map((l) => (
+          <li key={l.id}>
+            <div className="txt">
+              <strong>{LETTER_KIND[l.kind]} · {day(l.for_date)}{l.for_date === today ? ' (today)' : ''}</strong>
+              <span>{l.ref} · {l.theme} · {l.status === 'sent' ? `sent to ${l.sent_count}` : `${l.audience} will receive it`}</span>
+              {note?.id === l.id && (
+                <span className="adm-note-edit">
+                  <textarea rows={3} value={note.text} onChange={(e) => setNote({ ...note, text: e.target.value })} placeholder="A short word from the pastor, shown under the verse" aria-label="Message" />
+                  <span className="adm-row"><button className="adm-btn small primary" onClick={() => { act(l, 'note', { note: note.text }); setNote(null); }}>Save</button><button className="adm-btn small ghost" onClick={() => setNote(null)}>Cancel</button></span>
+                </span>
+              )}
+            </div>
+            <Badge s={l.status} />
+            <div className="acts">
+              {l.status === 'waiting' && <button className="adm-btn small" onClick={() => act(l, 'approve')}>Approve</button>}
+              {['scheduled', 'waiting'].includes(l.status) && <button className="adm-btn small ghost" onClick={() => act(l, 'pause')}>Pause</button>}
+              {l.status === 'paused' && <button className="adm-btn small" onClick={() => act(l, 'resume')}>Resume</button>}
+              {l.kind !== 'sms' && <a className="adm-btn small ghost" href={`/api/admin/letters/${l.id}/preview`} target="_blank" rel="noreferrer">Preview</a>}
+              {['scheduled', 'waiting', 'paused'].includes(l.status) && l.kind !== 'sms' && <button className="adm-btn small ghost" onClick={() => setNote({ id: l.id, text: l.note || '' })}>Add a message</button>}
+              <button className="adm-btn small ghost" onClick={() => act(l, 'test')}>{l.kind === 'sms' ? 'Show text' : 'Send me a test'}</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function SmsTools() {
+  const [phones, setPhones] = useState('');
+  const [info, setInfo] = useState(null);
+  const send = async () => {
+    try {
+      const r = await api('/admin/sms/send', { method: 'POST', body: { phones } });
+      setInfo({ kind: 'ok', text: `Today's verse was sent to ${r.sent} number${r.sent === 1 ? '' : 's'}.` });
+      setPhones('');
+    } catch (x) {
+      setInfo({ kind: 'error', text: x.message });
+    }
+  };
+  return (
+    <>
+      <Note>Numbers that asked for the Verse of the Day by SMS. Only add people who agreed to it. <a href="/api/admin/sms_contacts.csv">Download the list (CSV)</a></Note>
+      <div className="adm-card">
+        <h2>Send today's verse to a number</h2>
+        <p className="adm-muted">Type one or more numbers, separated by commas. This uses the church SMS account.</p>
+        <div className="adm-row wrap">
+          <input className="adm-input" value={phones} onChange={(e) => setPhones(e.target.value)} placeholder="0772 123456, 0701 234567" aria-label="Phone numbers" />
+          <button className="adm-btn primary" onClick={send} disabled={!phones.trim()}>Send SMS</button>
+        </div>
+        {info && <Note kind={info.kind}>{info.text}</Note>}
+      </div>
+    </>
+  );
+}
+
 // ---------- History & undo ----------
 
 const ACTION_WORD = { create: 'Added', update: 'Changed', delete: 'Deleted', settings: 'Settings' };
@@ -683,7 +862,7 @@ function History() {
                 <span>{[ACTION_WORD[c.action] || c.action, when(c.created_at), c.actor, c.undone_at ? `undone ${when(c.undone_at)} by ${c.undone_by}` : null].filter(Boolean).join(' · ')}</span>
               </div>
               <div className="acts">
-                {!c.undone_at && !c.summary.startsWith('Undid') && <button className="adm-btn small ghost" onClick={() => undo(c)}>Undo</button>}
+                {c.can_undo && <button className="adm-btn small ghost" onClick={() => undo(c)}>Undo</button>}
               </div>
             </li>
           ))}
@@ -701,6 +880,8 @@ function Dashboard() {
   if (!s) return <p>Loading…</p>;
   const checks = [
     [s.inbox_ready, 'Update mailbox connected', 'settings'],
+    [s.bible, s.bible ? 'Bible text loaded (KJV and WEB)' : 'Bible text not loaded yet', 'verses'],
+    [s.letters_on, s.letters_on ? 'Verse emails are on' : 'Verse emails are off', 'letters'],
     [s.payments !== 'off', s.payments !== 'off' ? `Phone prompts for giving are on (${s.payments === 'yo' ? 'Yo! Payments' : s.payments})` : 'Phone prompts for giving are off: givers use the dial code for now', 'gifts']
   ];
   return (
@@ -713,6 +894,7 @@ function Dashboard() {
         <a href="#sermons"><b>{s.sermons}</b><span>sermons</span></a>
         <a href="#photos"><b>{s.photos}</b><span>gallery photos</span></a>
         <a href="#events"><b>{s.events}</b><span>upcoming events</span></a>
+        <a href="#letters"><b>{s.subscribers}</b><span>on the verse email list</span></a>
       </div>
       <section className="adm-card">
         <h2>Set-up</h2>
@@ -766,6 +948,8 @@ export default function Admin() {
   else if (current === 'messages') body = <Messages />;
   else if (current === 'settings') body = <Settings />;
   else if (current === 'history') body = <History />;
+  else if (current === 'verses') body = <Verses schema={schema} />;
+  else if (current === 'letters') body = <Letters />;
   else if (current === 'account') body = <Account admin={admin} onOut={() => setAdmin(null)} />;
   else body = <ResourceSection key={current} res={current} schema={schema} />;
 

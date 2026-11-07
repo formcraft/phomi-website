@@ -37,6 +37,39 @@ function resources(): array
                 'status' => $status,
             ],
         ],
+        'verses' => [
+            'label' => 'Planned verses',
+            'order' => 'show_on DESC, id DESC',
+            'fields' => [
+                'show_on' => ['type' => 'date', 'required' => true, 'label' => 'Date (for a weekly verse, any day of that week)'],
+                'kind' => ['type' => 'select', 'options' => ['day', 'week'], 'default' => 'day', 'label' => 'Verse of the Day or of the Week'],
+                'reference' => ['type' => 'text', 'required' => true, 'max' => 80, 'label' => 'Bible reference (e.g. John 3:16 or Psalm 23:1-4)'],
+                'theme' => ['type' => 'text', 'max' => 80, 'label' => 'Theme (e.g. Hope)'],
+                'note' => ['type' => 'textarea', 'max' => 1500, 'label' => 'A short word from the pastor (optional, shown with the verse)'],
+                'status' => $status,
+            ],
+        ],
+        'subscribers' => [
+            'label' => 'Email list',
+            'order' => 'id DESC',
+            'fields' => [
+                'email' => ['type' => 'email', 'required' => true, 'max' => 190, 'label' => 'Email address'],
+                'name' => ['type' => 'text', 'max' => 120, 'label' => 'Name'],
+                'daily' => ['type' => 'bool', 'default' => '1', 'label' => 'Verse of the Day every morning'],
+                'weekly' => ['type' => 'bool', 'default' => '1', 'label' => 'Weekly letter on Monday'],
+                'status' => ['type' => 'select', 'options' => ['active', 'pending', 'unsubscribed'], 'default' => 'active', 'label' => 'Status'],
+            ],
+        ],
+        'sms_contacts' => [
+            'label' => 'SMS list',
+            'order' => 'id DESC',
+            'fields' => [
+                'phone' => ['type' => 'text', 'required' => true, 'max' => 30, 'label' => 'Phone number (e.g. 0772 123456)'],
+                'name' => ['type' => 'text', 'max' => 120, 'label' => 'Name'],
+                'daily' => ['type' => 'bool', 'default' => '1', 'label' => 'Verse of the Day by SMS'],
+                'status' => ['type' => 'select', 'options' => ['active', 'stopped'], 'default' => 'active', 'label' => 'Status'],
+            ],
+        ],
         'photos' => [
             'label' => 'Gallery photos',
             'order' => 'created_at DESC, id DESC',
@@ -209,10 +242,21 @@ function resource_create(string $name, array $in, string $source = 'admin'): arr
     $def = resource($name);
     $data = clean_fields($def, $in);
     if ($name === 'videos' && $data['link'] === '' && $data['video'] === '') throw new ApiError(422, 'Add a YouTube, TikTok or Facebook link, or upload a video file.');
+    resource_check($name, $data);
+    if ($name === 'subscribers') {
+        $data['token'] = random_token(20);
+        if ($data['status'] === 'active') $data['confirmed_at'] = now();
+    }
     if ($name !== 'senders') $data['source'] = $source;
     $data['created_at'] = now();
     if ($name === 'senders' && row('SELECT id FROM senders WHERE email = ?', [$data['email']])) {
         throw new ApiError(409, 'That sender is already on the list.');
+    }
+    if ($name === 'sms_contacts' && row('SELECT id FROM sms_contacts WHERE phone = ?', [$data['phone']])) {
+        throw new ApiError(409, 'That number is already on the SMS list.');
+    }
+    if ($name === 'subscribers' && row('SELECT id FROM subscribers WHERE email = ?', [$data['email']])) {
+        throw new ApiError(409, 'That address is already on the email list.');
     }
     $id = insert($name, $data);
     $r = row("SELECT * FROM $name WHERE id = ?", [$id]);
@@ -226,6 +270,9 @@ function resource_update(string $name, int $id, array $in): array
     $old = row("SELECT * FROM $name WHERE id = ?", [$id]);
     if (!$old) throw new ApiError(404, 'Not found.');
     $data = clean_fields($def, $in, true);
+    $merged = $data + $old;
+    resource_check($name, $merged);
+    foreach (['reference', 'show_on', 'phone'] as $k) if (array_key_exists($k, $data)) $data[$k] = $merged[$k];
     if ($name === 'videos' && ($data['link'] ?? $old['link']) === '' && ($data['video'] ?? $old['video']) === '') {
         throw new ApiError(422, 'Add a YouTube, TikTok or Facebook link, or upload a video file.');
     }
@@ -234,6 +281,23 @@ function resource_update(string $name, int $id, array $in): array
     [$b, $a] = diff_rows($old, $r);
     if ($a) log_change('update', $name, $id, $b, $a, change_summary($name, $r, $b, $a));
     return $r;
+}
+
+// Extra checks for some sections
+function resource_check(string $name, array &$data): void
+{
+    if ($name === 'sms_contacts' && isset($data['phone'])) {
+        $p = sms_phone((string)$data['phone']);
+        if (!$p) throw new ApiError(422, 'That phone number was not understood. Write it like 0772 123456, or with + and the country code.');
+        $data['phone'] = $p;
+    }
+    if ($name === 'verses' && isset($data['reference'])) {
+        $p = bible_parse_ref($data['reference']);
+        if (!$p) throw new ApiError(422, 'That Bible reference was not understood. Write it like John 3:16 or Psalm 23:1-4.');
+        $data['reference'] = bible_ref_label($p);
+        if (bible_ready() && !bible_passage($data['reference'])) throw new ApiError(422, "{$data['reference']} was not found in the Bible.");
+        if (($data['kind'] ?? 'day') === 'week' && !empty($data['show_on'])) $data['show_on'] = week_start($data['show_on']);
+    }
 }
 
 function change_summary(string $name, array $r, array $b, array $a): string
@@ -280,5 +344,6 @@ function public_content(): array
         'announcements' => $news,
         'testimonies' => $testimonies,
         'payments' => payment_provider() ? 'push' : 'ussd',
+        'verse' => ['day' => verse_for($today, 'day'), 'week' => verse_for($today, 'week')],
     ];
 }

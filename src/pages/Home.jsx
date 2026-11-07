@@ -5,6 +5,8 @@ import Seal from '../components/Seal.jsx';
 import { ContactForm } from '../components/MessageForm.jsx';
 import { ClipCard, GatherCards, useClips, MapCard, Photo, Quote, SectionHead, Tbc, usePhotoViewer } from '../components/ui.jsx';
 import { CHURCH, img, video } from '../data.js';
+import { Subscribe, VerseCard } from '../components/Verse.jsx';
+import { useLive } from '../live.jsx';
 
 function Hero() {
   const ref = useRef();
@@ -46,6 +48,7 @@ function Hero() {
 export default function Home() {
   const clips = useClips();
   const view = usePhotoViewer();
+  const { verse } = useLive();
   return (
     <>
       <Hero />
@@ -57,6 +60,14 @@ export default function Home() {
           <Link to="/ministries?tab=outreach"><Icon name="globe" size={34} /><span>Outreach to the Needy</span></Link>
         </div>
       </div>
+      {verse?.day?.text && (
+        <section className="sec band verse-home" aria-label="Verse of the Day">
+          <div className="wrap verse-home-in">
+            <VerseCard v={verse.day} />
+            <Subscribe id="home-subscribe" title="Receive it every morning" />
+          </div>
+        </section>
+      )}
 
       <section className="sec band" id="story">
         <div className="wrap split">

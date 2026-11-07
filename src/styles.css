@@ -354,3 +354,58 @@ footer .base .in{max-width:1160px;margin:0 auto;padding:20px var(--gr) 20px var(
 @media (prefers-reduced-motion: reduce){.pulse{animation:none}}
 .btn[disabled]{opacity:.6;cursor:wait;transform:none}
 .sermon .player.tall{aspect-ratio:9/16;max-width:320px;background:#0E1626}
+
+/* ---------- Bible and Verse of the Day ---------- */
+.verse-card{margin:0;display:flex;flex-direction:column;gap:12px;background:var(--dark);color:var(--white);padding:clamp(24px,4vw,40px);border-radius:4px;min-width:0}
+.verse-card .eyebrow{color:var(--accentLight)}
+.verse-card blockquote{margin:0;font:italic 400 clamp(21px,2.6vw,28px)/1.5 var(--head);text-wrap:pretty}
+.verse-card figcaption{font-weight:600;color:var(--accentLight)}
+.verse-card figcaption a{color:var(--accentLight)}
+.verse-card figcaption span{color:var(--onDark);font-weight:400}
+.verse-card .note{margin:0;color:var(--onDark);white-space:pre-line}
+.verse-card.compact blockquote{font-size:clamp(18px,2vw,22px)}
+.verse-acts{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-top:6px}
+.verse-card .linkbtn,.linkbtn.light{color:var(--accentLight)}
+.verse-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:24px;align-items:start}
+.verse-home{background:var(--ground)}
+.verse-home-in{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr));gap:32px;align-items:center}
+.subscribe{display:flex;flex-direction:column;gap:14px;min-width:0}
+.subscribe h3{margin:0;font-family:var(--head);font-size:clamp(24px,3vw,30px)}
+.subscribe p{margin:0;color:var(--muted);line-height:1.7}
+.subscribe .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:14px}
+.subscribe .checks{display:flex;flex-wrap:wrap;gap:8px 22px;font-size:15px}
+.subscribe .checks input{width:18px;height:18px;accent-color:var(--clay);vertical-align:-3px;margin-right:6px}
+.subscribe .hp{position:absolute;left:-9999px;width:1px;height:1px}
+.subscribe .ok{background:var(--ok-bg);border:1px solid var(--ok-line);color:var(--ok-fg);padding:12px 14px;border-radius:8px}
+.err{margin:0;background:#FBEAE4;border:1px solid #E7B9A7;color:#7A2405;padding:12px 14px;border-radius:8px}
+.bible{display:flex;flex-direction:column;gap:22px;max-width:820px}
+.bible-find{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.bible-find .grow{flex:1 1 280px}
+.bible-nav{display:grid;grid-template-columns:2fr 1fr 2fr;gap:12px}
+@media (max-width:560px){.bible-nav{grid-template-columns:1fr 1fr}.bible-nav .field:first-child{grid-column:1/-1}}
+.chapter header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.chapter header p{margin:0;color:var(--muted);font-size:14px}
+.chapter .hint{margin:12px 0 0;font-size:13px;color:var(--muted)}
+.verses{margin-top:14px;font:400 19px/1.95 var(--head);color:var(--dark)}
+.vs{cursor:pointer;border-radius:3px;transition:background .15s}
+.vs:hover{background:var(--tint)}
+.vs:focus-visible{outline:2px solid var(--accent)}
+.vs.on{background:#F3DFB5}
+.vs sup{font:600 11px var(--body);color:var(--clay);margin-right:4px}
+.chapter-steps{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:28px}
+.chapter-steps .btn{border:1px solid var(--line)}
+.bible-results ol{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:12px}
+.bible-results li{line-height:1.7}
+.bible-results .linkbtn{display:inline;margin-right:6px}
+.h3{margin:0;font-family:var(--head);font-size:22px}
+.verse-bar{position:sticky;bottom:0;z-index:20;background:var(--dark);color:var(--white);padding-block:14px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 20px rgba(0,0,0,.18)}
+.verse-bar .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px}
+.verse-bar p{margin:0;flex:1 1 300px;min-width:0;font-size:15px}
+.verse-bar .verse-acts{margin:0}
+.sendto{flex-basis:100%;display:flex;flex-direction:column;gap:6px}
+.sendto .field{color:inherit}
+.sendto-row{display:flex;flex-wrap:wrap;gap:8px}
+.sendto-row input{flex:1 1 170px;min-width:0;font:400 15px var(--body);padding:10px 12px;border:1px solid #CDBC9E;border-radius:8px;background:var(--ground);color:var(--dark)}
+.sendto-row .btn{min-height:44px;padding:0 20px}
+.sendto .btn.off{opacity:.45;pointer-events:none}
+.sendto .small{margin:0;font-size:12px;opacity:.8}

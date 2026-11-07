@@ -18,6 +18,7 @@ export const CHURCH = {
   instagram: '', // add link when ready
   tiktok: '', // add link when ready
   youtube: '', // the church's YouTube channel, when ready
+  whatsappChannel: '', // the church's WhatsApp Channel link, when ready
   mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Burweta%2C+Butebo+District%2C+Uganda'
 };
 
@@ -53,6 +54,7 @@ export const NAV = [
   ['/about', 'About'],
   ['/ministries', 'Ministries'],
   ['/sermons', 'Sermons'],
+  ['/bible', 'Bible'],
   ['/events', 'Events'],
   ['/gallery', 'Gallery'],
   ['/prayer', 'Prayer Requests'],

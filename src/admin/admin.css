@@ -100,3 +100,13 @@
   .adm-stats b{font-size:21px}
 }
 .adm-list li.undone{opacity:.55}
+.adm-verse{font:italic 18px/1.6 Georgia,serif;margin:0 0 12px}
+.adm-row.wrap{flex-wrap:wrap}
+.adm-pics{margin-top:14px}
+.adm-pics img{max-width:min(320px,100%);border-radius:8px;display:block}
+.adm-input{flex:1 1 240px;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.adm-note-edit{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.adm-note-edit textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.adm-badge.scheduled,.adm-badge.active,.adm-badge.sent{background:#EEF4EA;color:#2C4A20}
+.adm-badge.paused,.adm-badge.skipped,.adm-badge.unsubscribed,.adm-badge.stopped{background:#EEE;color:#555}
+.adm-badge.waiting,.adm-badge.sending{background:#FBF0D9;color:#7A5612}

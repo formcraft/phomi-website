@@ -5,7 +5,7 @@ import { BANK, CHURCH, MOMO, TIMES } from './data.js';
 // The built-in content in data.js shows first and stays as a backup if the server can't be reached.
 
 const KEY = 'phomi-live-v1';
-const EMPTY = { sermons: [], videos: [], photos: [], events: [], announcements: [], testimonies: [], settings: {}, payments: 'ussd', ready: false };
+const EMPTY = { verse: null, sermons: [], videos: [], photos: [], events: [], announcements: [], testimonies: [], settings: {}, payments: 'ussd', ready: false };
 const Live = createContext(EMPTY);
 
 function applySettings(s = {}) {
@@ -25,6 +25,7 @@ function applySettings(s = {}) {
   set(CHURCH, 'youtube', s.youtube);
   set(CHURCH, 'tiktok', s.tiktok);
   set(CHURCH, 'instagram', s.instagram);
+  set(CHURCH, 'whatsappChannel', s.whatsapp_channel);
   set(MOMO.mtn, 'num', s.momo_mtn_number);
   set(MOMO.mtn, 'reg', s.momo_mtn_name);
   set(MOMO.airtel, 'num', s.momo_airtel_number);

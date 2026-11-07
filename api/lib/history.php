@@ -4,7 +4,7 @@ declare(strict_types=1);
 // Change history: every change to content and settings is recorded with what it was before,
 // so an admin can see who changed what and undo it.
 
-const HISTORY_TABLES = ['sermons', 'videos', 'photos', 'events', 'announcements', 'testimonies', 'senders', 'settings'];
+const HISTORY_TABLES = ['sermons', 'videos', 'verses', 'subscribers', 'sms_contacts', 'letters', 'photos', 'events', 'announcements', 'testimonies', 'senders', 'settings'];
 
 // Who is making changes in this request: an admin's email, "email: sender@…" or "approval link".
 function actor(?string $set = null): string
@@ -30,14 +30,15 @@ function log_change(string $action, string $table, ?int $id, ?array $before, ?ar
 
 function row_label(string $table, array $r): string
 {
-    $name = ['sermons' => 'sermon', 'videos' => 'video', 'photos' => 'photo', 'events' => 'event', 'announcements' => 'announcement', 'testimonies' => 'testimony', 'senders' => 'approved sender'][$table] ?? $table;
-    $title = $r['title'] ?? $r['caption'] ?? $r['email'] ?? '';
+    $name = ['sermons' => 'sermon', 'videos' => 'video', 'verses' => 'planned verse', 'subscribers' => 'email subscriber', 'sms_contacts' => 'SMS contact', 'letters' => 'verse email', 'photos' => 'photo', 'events' => 'event', 'announcements' => 'announcement', 'testimonies' => 'testimony', 'senders' => 'approved sender'][$table] ?? $table;
+    $title = $r['title'] ?? $r['caption'] ?? $r['email'] ?? $r['phone'] ?? (isset($r['reference']) ? $r['reference'] . ' on ' . $r['show_on'] : '');
     return $title !== '' ? "$name \"" . mb_substr((string)$title, 0, 80) . '"' : $name;
 }
 
 function history_list(int $limit = 200): array
 {
     $items = rows('SELECT id, created_at, actor, action, table_name, row_id, summary, undone_at, undone_by FROM changes ORDER BY id DESC LIMIT ' . min(500, max(1, $limit)));
+    foreach ($items as &$i) $i['can_undo'] = in_array($i['table_name'], HISTORY_TABLES, true) && !$i['undone_at'] && !str_starts_with((string)$i['summary'], 'Undid');
     return $items;
 }
 

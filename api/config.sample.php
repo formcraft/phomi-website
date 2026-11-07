@@ -15,6 +15,9 @@ return [
     ],
 
     'mail_from' => 'church@pottershouseoutreachministriesinternational.com',
+    'letters_per_hour' => 100, // verse emails per hour; keep under your Hostinger email plan's limit
+    // Daily verse by SMS (optional, paid per message). Fill in after opening an Africa's Talking account.
+    'sms' => ['provider' => '', 'username' => '', 'api_key' => '', 'sender_id' => '', 'sandbox' => false],
 
     'payments' => [
         'provider' => '', // 'yo' (recommended for a direct PIN prompt) or 'flutterwave'. Leave '' until the account is live.
