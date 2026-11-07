@@ -136,6 +136,10 @@ try {
     await page.goto(`${BASE}/bible?ref=Psalm+23:1`);
     await page.waitForSelector('#v1.on');
     check(`back in English, the Bible is English again on ${label}`, /^Psalm 23/.test(await page.textContent('.chapter h2')), await page.textContent('.chapter h2'));
+    // Let the page finish scrolling to the verse, then bring verse 4 into the middle like a reader would
+    await page.waitForTimeout(600);
+    await page.locator('#v4').evaluate((e) => e.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(300);
     await page.tap('#v4');
     await page.waitForSelector('.verse-bar >> text=Psalm 23:4');
     const bar = await page.evaluate(() => { const r = document.querySelector('.verse-bar').getBoundingClientRect(); return { w: r.width, h: r.height, vh: window.innerHeight }; });
