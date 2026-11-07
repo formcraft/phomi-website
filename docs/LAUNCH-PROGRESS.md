@@ -16,8 +16,8 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 | Date | Phase | Step | Status | Still missing |
 | --- | --- | --- | --- | --- |
 | 2026-11-08 | 0 | Latest code, checks pass | done | Two Windows-only test fixes made on the branch (API test folder link and server log; two site checks waited too little) |
-| 2026-11-08 | 0 | Owner has tried the site locally, nothing left to change | waiting | |
-| | 0 | hPanel and GitHub sign-in, Hostinger plan name | to do | |
+| 2026-11-08 | 0 | Owner has tried the site locally, nothing left to change | done | Owner said "go live", no changes |
+| 2026-11-08 | 0 | hPanel and GitHub sign-in, Hostinger plan name | waiting | |
 | | 1 | WordPress backup downloaded and opened | to do | |
 | | 1 | GiveWP donation records exported (if needed) | to do | |
 | | 1 | Redirects for every old address | to do | The 8 addresses above |
