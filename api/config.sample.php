@@ -31,7 +31,4 @@ return [
         ],
     ],
 
-    'anthropic' => [
-        'api_key' => '', // sk-ant-... from platform.claude.com, for reading untagged emails
-    ],
 ];

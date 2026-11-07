@@ -21,7 +21,7 @@ symlinkSync(join(ROOT, 'api'), join(web, 'api'));
 const cfg = join(tmp, 'config.php');
 writeFileSync(cfg, `<?php return ['debug'=>true,'site_url'=>'${BASE}','app_key'=>str_repeat('k',40),'install_token'=>'install-token-123',
 'db'=>['dsn'=>'sqlite:${tmp}/site.db','user'=>null,'pass'=>null],'uploads_dir'=>'${web}/uploads','uploads_url'=>'/uploads',
-'mail_log'=>'${tmp}/mail.log','mail_from'=>'church@phomi.test','payments'=>['provider'=>'mock','min'=>500,'max'=>5000000,'yo'=>[],'flutterwave'=>[]],'anthropic'=>['api_key'=>'']];`);
+'mail_log'=>'${tmp}/mail.log','mail_from'=>'church@phomi.test','payments'=>['provider'=>'mock','min'=>500,'max'=>5000000,'yo'=>[],'flutterwave'=>[]]];`);
 
 const server = spawn('php', ['-S', `127.0.0.1:${PORT}`, '-t', web, join(ROOT, 'api', 'tests', 'router.php')], { env: { ...process.env, PHOMI_CONFIG: cfg }, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 800));
@@ -88,6 +88,32 @@ try {
   await page.fill('label:has-text("Headline") input', 'Youth crusade this Saturday at 2pm');
   await page.click('button:has-text("Save")');
   await page.waitForSelector('text=Youth crusade this Saturday');
+  // A TikTok video link
+  await page.click('nav >> text=Videos');
+  await page.click('button:has-text("Add")');
+  await page.fill('label:has-text("Title") input', 'Choir at the crusade');
+  await page.fill('label:has-text("TikTok") input', 'https://www.tiktok.com/@phomi/video/7301234567890123456');
+  await page.selectOption('label:has-text("Category") select', 'Outreach');
+  await page.click('button:has-text("Save")');
+  await page.waitForSelector('.adm-list >> text=Choir at the crusade');
+  check('TikTok video saved from the admin page', await page.isVisible('.adm-list >> text=TikTok'));
+
+  // Delete something, then undo it from the history
+  await page.click('nav >> text=Announcements');
+  await page.waitForSelector('text=Youth crusade this Saturday');
+  page.once('dialog', (d) => d.accept());
+  await page.click('.adm-list li:has-text("Youth crusade") button[aria-label="Delete"]');
+  await page.waitForSelector('text=Nothing here yet.');
+  await page.click('nav >> text=History & undo');
+  await page.waitForSelector('text=Deleted announcement');
+  await shot(page, 'admin-history');
+  page.once('dialog', (d) => d.accept());
+  await page.click('.adm-list li:has-text("Deleted announcement") button:has-text("Undo")');
+  await page.waitForSelector('text=Undone.');
+  await page.click('nav >> text=Announcements');
+  await page.waitForSelector('text=Youth crusade this Saturday');
+  check('undo brings back a deleted announcement', true);
+
   await page.click('nav >> text=Settings');
   await page.fill('label:has-text("Prayer day") input', 'Wednesday');
   await page.click('.adm-head button:has-text("Save")');
@@ -102,6 +128,13 @@ try {
   await page.goto(`${BASE}/sermons`);
   await page.waitForSelector('h2:has-text("Faith that moves mountains")');
   check('public Sermons page shows the new sermon', await page.isVisible('iframe[src*="youtube-nocookie.com/embed/dQw4w9WgXcQ"]'));
+  await page.route(/tiktok\.com|ytimg\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }));
+  check('TikTok video listed under Recent Moments', await page.isVisible('.clip:has-text("Choir at the crusade") >> .site:has-text("TikTok")'));
+  await page.click('.clip:has-text("Choir at the crusade")');
+  await page.waitForSelector('.lb iframe[src*="tiktok.com/player/v1/7301234567890123456"]');
+  check('TikTok video plays in the viewer', true);
+  await shot(page, 'site-tiktok');
+  await page.keyboard.press('Escape');
   check('announcement bar on every page', await page.isVisible('.newsbar >> text=Youth crusade this Saturday'));
   await shot(page, 'site-sermons');
   await page.goto(`${BASE}/gallery`);

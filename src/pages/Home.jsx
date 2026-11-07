@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import Seal from '../components/Seal.jsx';
 import { ContactForm } from '../components/MessageForm.jsx';
-import { ClipCard, GatherCards, MapCard, Photo, Quote, SectionHead, Tbc, usePhotoViewer } from '../components/ui.jsx';
-import { CHURCH, CLIPS, img, video } from '../data.js';
+import { ClipCard, GatherCards, useClips, MapCard, Photo, Quote, SectionHead, Tbc, usePhotoViewer } from '../components/ui.jsx';
+import { CHURCH, img, video } from '../data.js';
 
 function Hero() {
   const ref = useRef();
@@ -44,6 +44,7 @@ function Hero() {
 }
 
 export default function Home() {
+  const clips = useClips();
   const view = usePhotoViewer();
   return (
     <>
@@ -127,7 +128,7 @@ export default function Home() {
             </div>
             <Link className="btn btn-navy" to="/sermons">Watch more</Link>
           </div>
-          <div className="clips">{CLIPS.slice(0, 3).map((c) => <ClipCard key={c.v} clip={c} />)}</div>
+          <div className="clips">{clips.slice(0, 3).map((c) => <ClipCard key={c.key} clip={c} list={clips} />)}</div>
         </div>
       </section>
 

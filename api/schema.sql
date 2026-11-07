@@ -44,6 +44,21 @@ CREATE TABLE IF NOT EXISTS sermons (
   KEY sermons_list (status, preached_on)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Short videos and clips: a YouTube, TikTok or Facebook link, or an uploaded MP4
+CREATE TABLE IF NOT EXISTS videos (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(200) NOT NULL,
+  link VARCHAR(500) NOT NULL DEFAULT '',
+  video VARCHAR(300) NOT NULL DEFAULT '',
+  cover VARCHAR(300) NOT NULL DEFAULT '',
+  category VARCHAR(60) NOT NULL DEFAULT 'Worship',
+  posted_on DATE NULL,
+  status VARCHAR(12) NOT NULL DEFAULT 'live',
+  source VARCHAR(12) NOT NULL DEFAULT 'admin',
+  created_at DATETIME NOT NULL,
+  KEY videos_list (status, posted_on)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS photos (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   file VARCHAR(300) NOT NULL,
@@ -150,4 +165,20 @@ CREATE TABLE IF NOT EXISTS hits (
   bucket VARCHAR(120) NOT NULL,
   created_at DATETIME NOT NULL,
   KEY hits_bucket (bucket, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Every change to the site's content and settings, so an admin can see who changed what and undo it
+CREATE TABLE IF NOT EXISTS changes (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  created_at DATETIME NOT NULL,
+  actor VARCHAR(190) NOT NULL DEFAULT '',
+  action VARCHAR(12) NOT NULL,
+  table_name VARCHAR(30) NOT NULL,
+  row_id INT UNSIGNED NULL,
+  summary VARCHAR(300) NOT NULL DEFAULT '',
+  before_json MEDIUMTEXT NULL,
+  after_json MEDIUMTEXT NULL,
+  undone_at DATETIME NULL,
+  undone_by VARCHAR(190) NOT NULL DEFAULT '',
+  KEY changes_list (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

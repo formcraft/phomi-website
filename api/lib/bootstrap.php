@@ -35,12 +35,10 @@ if (config('debug')) {
 }
 date_default_timezone_set(config('timezone', 'Africa/Kampala'));
 
-$vendor = dirname(__DIR__) . '/vendor/autoload.php';
-if (is_file($vendor)) require $vendor;
-
 require __DIR__ . '/db.php';
 require __DIR__ . '/http.php';
 require __DIR__ . '/settings.php';
+require __DIR__ . '/history.php';
 require __DIR__ . '/auth.php';
 require __DIR__ . '/media.php';
 require __DIR__ . '/resources.php';
@@ -48,5 +46,4 @@ require __DIR__ . '/payments.php';
 require __DIR__ . '/mailer.php';
 require __DIR__ . '/mime.php';
 require __DIR__ . '/imap.php';
-require __DIR__ . '/ai.php';
 require __DIR__ . '/ingest.php';

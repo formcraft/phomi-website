@@ -28,12 +28,11 @@ $checks = [
     'PHP 8.1 or newer' => version_compare(PHP_VERSION, '8.1.0', '>='),
     'Database connection' => (function () { try { db()->query('SELECT 1'); return true; } catch (Throwable $e) { return false; } })(),
     'GD (photo editing)' => function_exists('imagecreatefromstring'),
-    'cURL (payments, Claude)' => function_exists('curl_init'),
+    'cURL (payments)' => function_exists('curl_init'),
     'OpenSSL (mailbox)' => extension_loaded('openssl'),
     'fileinfo (file types)' => class_exists('finfo'),
     'mbstring' => function_exists('mb_substr'),
     'app_key set' => strlen((string)config('app_key')) >= 32,
-    'Anthropic library installed' => class_exists('Anthropic\\Client'),
 ];
 $list = '<ul>' . implode('', array_map(fn($k, $ok) => '<li>' . ($ok ? '✅' : '❌') . ' ' . $h($k) . '</li>', array_keys($checks), $checks)) . '</ul>';
 if (!$checks['Database connection']) page($list . '<p>Fix the database details in phomi-config.php, then reload this page.</p>');
@@ -53,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     else {
         insert('admins', ['email' => $email, 'name' => trim((string)($_POST['name'] ?? '')), 'password_hash' => password_hash($pass, PASSWORD_DEFAULT), 'created_at' => now()]);
         // The first admin is also an approved sender and gets the alerts
-        if (!row('SELECT id FROM senders WHERE email = ?', [$email])) insert('senders', ['email' => $email, 'name' => trim((string)($_POST['name'] ?? '')), 'publish_direct' => 1, 'created_at' => now()]);
+        if (!row('SELECT id FROM senders WHERE email = ?', [$email])) insert('senders', ['email' => $email, 'name' => trim((string)($_POST['name'] ?? '')), 'created_at' => now()]);
         setting_set('notify_email', $email);
         page($list . '<p>✅ All set. Your admin account is ready.</p><p><a href="/admin">Sign in to the admin page</a></p><p style="color:#6b5e4f">For safety you can now remove install_token from phomi-config.php.</p>');
     }

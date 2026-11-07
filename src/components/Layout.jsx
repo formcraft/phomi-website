@@ -82,7 +82,8 @@ function Footer() {
           <div className="soc">
             <a href={CHURCH.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook"><Icon name="facebook" size={18} /></a>
             <a href={`https://wa.me/${CHURCH.whatsappDigits}`} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><Icon name="chat" size={18} /></a>
-            {CHURCH.tiktok && <a href={CHURCH.tiktok} target="_blank" rel="noopener noreferrer" aria-label="TikTok"><Icon name="video" size={18} /></a>}
+            {CHURCH.youtube && <a href={CHURCH.youtube} target="_blank" rel="noopener noreferrer" aria-label="YouTube"><Icon name="video" size={18} /></a>}
+            {CHURCH.tiktok && <a href={CHURCH.tiktok} target="_blank" rel="noopener noreferrer" aria-label="TikTok"><Icon name="tiktok" size={18} /></a>}
             {CHURCH.instagram && <a href={CHURCH.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Icon name="instagram" size={18} /></a>}
           </div>
         </div>

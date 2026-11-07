@@ -7,7 +7,7 @@ The whole website, the PHP backend included, is built into `dist/` and uploaded 
 ├── phomi-config.php        ← your settings (copy of api/config.sample.php, filled in)
 └── public_html/
     ├── index.html, assets/, img/, video/   ← the website
-    ├── api/                                ← the PHP backend (index.php, lib/, cron/, vendor/)
+    ├── api/                                ← the PHP backend (index.php, lib/, cron/)
     └── uploads/                            ← photos, audio and video added later (created automatically)
 ```
 
@@ -23,9 +23,9 @@ Create `phomi-config.php` one folder above `public_html` (File Manager), using [
 
 ## 3. Upload
 
-**Automatic (recommended).** In GitHub, add the secrets `FTP_SERVER`, `FTP_USERNAME` and `FTP_PASSWORD` (Settings → Secrets and variables → Actions). Every push to `main` then tests, builds and uploads the site.
+**Automatic (recommended, free).** In GitHub, add the secrets `FTP_SERVER`, `FTP_USERNAME` and `FTP_PASSWORD` (Settings → Secrets and variables → Actions). Every push to `main` then tests, builds and uploads the site. This uses GitHub Actions, which is free for a public repository; no paid GitHub plan or GitHub command-line tool is needed.
 
-**By hand.** Run `cd api && composer install --no-dev` and then `npm ci && npm run build`. Upload the contents of `dist/` into `public_html` (File Manager → Upload, or FTP). Remove the old WordPress files once you have the backup.
+**By hand.** Run `npm ci && npm run build`. Upload the contents of `dist/` into `public_html` (File Manager → Upload, or FTP). Remove the old WordPress files once you have the backup.
 
 ## 4. First run
 
@@ -37,7 +37,7 @@ Create `phomi-config.php` one folder above `public_html` (File Manager), using [
    `/usr/bin/php /home/<user>/domains/pottershouseoutreachministriesinternational.com/public_html/api/cron/inbox.php`
    If the PHP command doesn't work on your plan, use the URL instead:
    `curl -s "https://pottershouseoutreachministriesinternational.com/api/cron/inbox?token=<cron_token>"`
-6. Check `https://pottershouseoutreachministriesinternational.com/api/health`. It shows whether the database, payments and Claude are on.
+6. Check `https://pottershouseoutreachministriesinternational.com/api/health`. It shows whether the database and payments are on.
 
 ## 5. Payments
 
@@ -48,9 +48,15 @@ When the Yo! Payments (or Flutterwave) account is approved, fill in `payments` i
 
 Test with UGX 500 on MTN and on Airtel, then check **Admin → Giving**.
 
-## 6. Claude
+## 6. Approving updates and undoing changes
 
-Add `anthropic.api_key` to `phomi-config.php`. Emails without a tag are then read and sorted automatically, and photos get captions. Without a key, tagged emails still work.
+- Every emailed update waits in **Admin → Emailed updates**. Approve or reject it there, or use the one-tap link in the alert email. Nothing appears on the site until someone approves it.
+- **Admin → History & undo** lists every change (who, what, when). *Undo* puts things back the way they were. If the same item was changed again later, undo the later change first.
+- Deleted photos, audio and video files stay on the server so a delete can be undone.
+
+## 7. Videos
+
+Post sermons and clips to the church's **YouTube** channel or **TikTok**, then add the link in **Admin → Videos** (or email it with the subject `Video:`). The video plays right on the Sermons and Home pages. Put the channel links in **Admin → Settings → Video and social pages** so they show in the footer. TikTok share links (`vm.tiktok.com/…`) are turned into the full address when saved; if that fails, the site shows a *Watch on TikTok* button instead.
 
 ## Troubleshooting
 

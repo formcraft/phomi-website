@@ -79,7 +79,16 @@ export function OverlayProvider({ children }) {
             </>
           )}
           <figure>
-            {it.type === 'video' ? (
+            {it.type === 'embed' ? (
+              <div className={'lb-embed ' + (it.shape || 'wide')}>
+                <iframe key={it.src} src={it.src} title={it.cap} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
+              </div>
+            ) : it.type === 'link' ? (
+              <div className="lb-link">
+                <img src={it.poster || img('v-hall-worship')} alt="" />
+                <a className="btn btn-gold" href={it.href} target="_blank" rel="noopener noreferrer">Watch on {it.site}</a>
+              </div>
+            ) : it.type === 'video' ? (
               <video key={it.name} controls autoPlay playsInline poster={it.poster ?? img('v-' + it.name)}>
                 <source src={video(it.name)} type="video/mp4" />
               </video>
@@ -88,7 +97,7 @@ export function OverlayProvider({ children }) {
             )}
             <figcaption>
               {it.cap}
-              {it.type !== 'video' && box.items.length > 1 ? ` · ${box.index + 1} of ${box.items.length}` : ''}
+              {it.type === 'img' && box.items.length > 1 ? ` · ${box.index + 1} of ${box.items.length}` : ''}
             </figcaption>
           </figure>
         </div>

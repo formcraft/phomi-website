@@ -36,6 +36,7 @@ const PATHS = {
     </g>
   ),
   facebook: <path {...S} d="M15 3h-2.5A3.5 3.5 0 0 0 9 6.5V9H7v3.5h2V21h3.5v-8.5H15l.5-3.5h-3V7a1 1 0 0 1 1-1H15z" />,
+  tiktok: <path {...S} d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.4 2.6 2.2 4.4 5 4.6" />,
   video: (
     <g {...S}>
       <rect x="2.5" y="5" width="19" height="14" rx="4" />
@@ -46,6 +47,13 @@ const PATHS = {
     <g {...S}>
       <rect x="3" y="3" width="18" height="18" rx="5" />
       <circle cx="12" cy="12" r="4" />
+    </g>
+  ),
+  image: (
+    <g {...S}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10" r="2" />
+      <path d="M21 16l-5-5-9 9" />
     </g>
   ),
   play: <path d="M8 5v14l11-7z" fill="currentColor" />,

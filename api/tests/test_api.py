@@ -23,7 +23,6 @@ with open(cfg_path, 'w') as f:
   'cron_token' => 'cron-token-123', 'db' => ['dsn' => 'sqlite:{tmp}/test.db', 'user' => null, 'pass' => null],
   'uploads_dir' => '{web}/uploads', 'uploads_url' => '/uploads', 'mail_log' => '{mail_log}',
   'mail_from' => 'church@phomi.test', 'payments' => ['provider' => 'mock', 'min' => 500, 'max' => 5000000, 'yo' => [], 'flutterwave' => []],
-  'anthropic' => ['api_key' => ''],
 ];""")
 
 env = dict(os.environ, PHOMI_CONFIG=cfg_path)
@@ -139,8 +138,12 @@ try:
     check('event created', code == 200 and r['item']['starts_at'] == '2030-12-14 14:00:00', r)
     code, r = call('POST', '/api/admin/r/announcements', {'title': 'New hall chairs have arrived'})
     check('announcement created', code == 200, r)
+    code, r = call('POST', '/api/admin/r/videos', {'title': 'No link'})
+    check('video needs a link or a file', code == 422, r)
+    code, r = call('POST', '/api/admin/r/videos', {'title': 'Choir on Sunday', 'link': 'https://www.tiktok.com/@phomi/video/7301234567890123456', 'category': 'Worship'})
+    check('TikTok video added', code == 200 and r['item']['link'].endswith('/video/7301234567890123456'), r)
 
-    code, r = call('POST', '/api/admin/settings', {'times_prayer_day': 'Wednesday', 'imap_user': 'updates@phomi.test', 'imap_pass': 'secret pass', 'imap_host': '127.0.0.1', 'imap_port': str(IMAP_PORT), 'publish_mode': 'review', 'ai_enabled': '0', 'bogus': 'x'})
+    code, r = call('POST', '/api/admin/settings', {'times_prayer_day': 'Wednesday', 'imap_user': 'updates@phomi.test', 'imap_pass': 'secret pass', 'imap_host': '127.0.0.1', 'imap_port': str(IMAP_PORT), 'bogus': 'x'})
     check('settings saved, password hidden', r['settings']['times_prayer_day'] == 'Wednesday' and r['settings']['imap_pass'] == '••••••••' and 'bogus' not in r['settings'], r)
 
     code, c = call('GET', '/api/content', admin=False)
@@ -180,27 +183,41 @@ try:
     check('office emailed about gift, prayer and message', log.count('To: pastor@phomi.test') >= 3, log[:500])
 
     # ---- Automatic updates by email ----
-    call('POST', '/api/admin/r/senders', {'email': 'deacon@phomi.test', 'name': 'Deacon', 'publish_direct': False})
+    call('POST', '/api/admin/r/senders', {'email': 'deacon@phomi.test', 'name': 'Deacon'})
     mails = [
         email('Sermon: Walking by faith', 'Preacher: Pastor Test\nScripture: 2 Corinthians 5:7\nDate: 1 November 2026\n\nWe walk by faith, not by sight.\nhttps://youtu.be/xyz123\n\nSent from my iPhone'),
         email('Photo: Outreach, Kibuku visit', 'Pictures from Saturday', attachments=[('IMG_1.jpg', jpeg(1200, 900), 'image', 'jpeg'), ('IMG_2.jpg', jpeg(900, 1200), 'image', 'jpeg')]),
         email('Event: Youth day', 'Venue: PHOMI hall\nCome all.', sender='deacon@phomi.test'),
         email('Hello', 'Buy cheap watches', sender='spam@example.com'),
         email('Times: prayer change', 'Prayer day: Friday\nPrayer time: 7pm - 9pm'),
+        email('Video: Outreach, Kibuku songs', 'Two clips:\nhttps://www.tiktok.com/@phomi/video/7309999999999999999\nhttps://www.youtube.com/watch?v=AbCdEf12345'),
     ]
     imap = subprocess.Popen([sys.executable, os.path.join(API, 'tests', 'fake_imap.py'), str(IMAP_PORT), *mails], stdout=subprocess.PIPE)
     imap.stdout.readline()
     code, r = call('POST', '/api/admin/inbox/test')
-    check('mailbox connection test', code == 200 and '5 unread' in r.get('message', ''), r)
+    check('mailbox connection test', code == 200 and '6 unread' in r.get('message', ''), r)
     code, r = call('POST', '/api/admin/inbox/run')
-    check('inbox run processed 5 emails', code == 200 and r.get('processed') == 5, r)
+    check('inbox run processed 6 emails', code == 200 and r.get('processed') == 6, r)
     imap.wait(timeout=10)
     statuses = [i['status'] for i in r.get('items', [])]
-    check('pastor sermon published straight away', statuses[0] == 'published', r['items'][0])
-    check('pastor photos published', statuses[1] == 'published', r['items'][1])
-    check('deacon event without date held for review', statuses[2] == 'review', r['items'][2])
-    check('unknown sender rejected', statuses[3] == 'rejected', r['items'][3])
-    check('times change published', statuses[4] == 'published', r['items'][4])
+    check('every emailed update waits for approval', statuses == ['review', 'review', 'review', 'rejected', 'review', 'review'], r['items'])
+
+    code, c = call('GET', '/api/content', admin=False)
+    check('nothing emailed is public before approval', all(x['title'] != 'Walking by faith' for x in c['sermons']) and len(c['photos']) == 1
+          and c['settings'].get('times_prayer_day') == 'Wednesday' and len(c['videos']) == 1, c)
+
+    code, ib = call('GET', '/api/admin/inbox?status=review')
+    by_kind = {i['target_type']: i for i in ib['items']}
+    token = by_kind['event']['approve_token']
+    code, page = call('GET', f'/api/inbox/approve?t={token}', admin=False, raw=True)
+    check('approval page shows the update', 'Youth day' in page and 'Approve' in page, page[:300])
+    code, page = call('POST', '/api/inbox/approve', form={'t': token, 'do': 'approve'}, admin=False, raw=True)
+    check('one-tap approve', 'now on the website' in page, page[:300])
+    code, page = call('POST', '/api/inbox/approve', form={'t': token, 'do': 'approve'}, admin=False, raw=True)
+    check('approval link works only once', 'already been handled' in page, page[:300])
+    for k in ('sermon', 'photo', 'times', 'video'):
+        code, r = call('POST', f"/api/admin/inbox/{by_kind[k]['id']}/approve", {})
+        check(f'admin approves the emailed {k}', code == 200 and r['status'] == 'published', r)
 
     code, c = call('GET', '/api/content', admin=False)
     s = [x for x in c['sermons'] if x['title'] == 'Walking by faith']
@@ -208,25 +225,38 @@ try:
     p = [x for x in c['photos'] if x['category'] == 'Outreach' and x['caption'] == 'Kibuku visit']
     check('emailed photos in gallery under Outreach', len(p) == 2 and p[0]['thumb'].endswith('-sm.jpg'), c['photos'])
     check('times updated from email', c['settings'].get('times_prayer_day') == 'Friday' and c['settings'].get('times_prayer_time') == '7pm - 9pm', c['settings'])
-    check('event under review is not public', all(e['title'] != 'Youth day' for e in c['events']), c['events'])
-
-    code, ib = call('GET', '/api/admin/inbox?status=review')
-    token = ib['items'][0]['approve_token']
-    code, page = call('GET', f'/api/inbox/approve?t={token}', admin=False, raw=True)
-    check('approval page shows the update', 'Youth day' in page and 'Approve' in page, page[:300])
-    code, page = call('POST', '/api/inbox/approve', form={'t': token, 'do': 'approve'}, admin=False, raw=True)
-    check('one-tap approve', 'now on the website' in page, page[:300])
-    code, page = call('POST', '/api/inbox/approve', form={'t': token, 'do': 'approve'}, admin=False, raw=True)
-    check('approval link works only once', 'already been handled' in page, page[:300])
-    code, c = call('GET', '/api/content', admin=False)
     check('approved event now public', any(e['title'] == 'Youth day' for e in c['events']), c['events'])
+    v = [x for x in c['videos'] if x['category'] == 'Outreach']
+    check('emailed TikTok and YouTube links became videos', len(v) == 2 and any('tiktok.com' in x['link'] for x in v) and any('youtube.com' in x['link'] for x in v), c['videos'])
     log = open(mail_log).read()
     check('senders get a reply', 'To: deacon@phomi.test' in log and 'is now on the website' in log, log[-600:])
     check('no reply to unknown sender', 'To: spam@example.com' not in log, '')
 
-    # ---- Clean-up actions ----
+    # ---- Change history and undo ----
+    code, h = call('GET', '/api/admin/changes')
+    items = h.get('items', [])
+    check('history records who changed what', any(i['actor'] == 'pastor@phomi.test' and i['action'] == 'create' and i['table_name'] == 'sermons' for i in items)
+          and any(i['actor'] == 'email: pastor@phomi.test' for i in items) and any(i['actor'] == 'approval link' for i in items), items[:5])
+    check('history never stores the mailbox password', all('secret pass' not in json.dumps(i) for i in items), '')
+    times_change = next(i for i in items if i['table_name'] == 'settings' and 'service times' in i['summary'])
+    code, r = call('POST', f"/api/admin/changes/{times_change['id']}/undo", {})
+    code, c = call('GET', '/api/content', admin=False)
+    check('undo puts the old service times back', code == 200 and c['settings'].get('times_prayer_day') == 'Wednesday', c['settings'])
+    code, r = call('POST', f"/api/admin/changes/{times_change['id']}/undo", {})
+    check('a change can only be undone once', code == 409, r)
     code, r = call('POST', f'/api/admin/r/sermons/{sid}/delete', {})
     check('sermon deleted', code == 200, r)
+    code, h = call('GET', '/api/admin/changes')
+    d = next(i for i in h['items'] if i['action'] == 'delete' and i['table_name'] == 'sermons')
+    code, r = call('POST', f"/api/admin/changes/{d['id']}/undo", {})
+    code, c = call('GET', '/api/content', admin=False)
+    check('undo brings a deleted sermon back', code == 200 and any(x['id'] == sid and x['scripture'] == 'Mark 11:22' for x in c['sermons']), r)
+    edit = next(i for i in h['items'] if i['action'] == 'update' and i['table_name'] == 'sermons' and i['row_id'] == sid)
+    code, r = call('POST', f"/api/admin/changes/{edit['id']}/undo", {})
+    code, c = call('GET', '/api/content', admin=False)
+    check('undo reverses an edit', code == 200 and any(x['id'] == sid and x['scripture'] == 'Mark 11:22-24' for x in c['sermons']), r)
+
+    # ---- Clean-up actions ----
     code, r = call('POST', '/api/admin/password', {'current': 'correct horse 1', 'password': 'short'})
     check('weak new password refused', code == 422, r)
     code, r = call('GET', '/api/cron/inbox?token=bad', admin=False)

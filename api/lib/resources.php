@@ -17,10 +17,23 @@ function resources(): array
                 'preached_on' => ['type' => 'date', 'label' => 'Date preached'],
                 'scripture' => ['type' => 'text', 'max' => 160, 'label' => 'Scripture'],
                 'summary' => ['type' => 'textarea', 'max' => 6000, 'label' => 'Summary or notes'],
-                'media_url' => ['type' => 'url', 'max' => 500, 'label' => 'YouTube or Facebook link'],
+                'media_url' => ['type' => 'url', 'max' => 500, 'label' => 'YouTube, TikTok or Facebook link'],
                 'audio' => ['type' => 'file', 'accept' => 'audio/*', 'label' => 'Audio file'],
                 'video' => ['type' => 'file', 'accept' => 'video/mp4', 'label' => 'Video file'],
                 'cover' => ['type' => 'file', 'accept' => 'image/*', 'label' => 'Cover picture'],
+                'status' => $status,
+            ],
+        ],
+        'videos' => [
+            'label' => 'Videos',
+            'order' => 'posted_on DESC, id DESC',
+            'fields' => [
+                'title' => ['type' => 'text', 'required' => true, 'max' => 200, 'label' => 'Title'],
+                'link' => ['type' => 'url', 'max' => 500, 'label' => 'YouTube, TikTok or Facebook link'],
+                'video' => ['type' => 'file', 'accept' => 'video/mp4', 'label' => 'Or upload a video file'],
+                'cover' => ['type' => 'file', 'accept' => 'image/*', 'label' => 'Cover picture (optional)'],
+                'category' => ['type' => 'select', 'options' => video_categories(), 'default' => 'Worship', 'label' => 'Category'],
+                'posted_on' => ['type' => 'date', 'label' => 'Date'],
                 'status' => $status,
             ],
         ],
@@ -77,7 +90,6 @@ function resources(): array
             'fields' => [
                 'email' => ['type' => 'email', 'required' => true, 'max' => 190, 'label' => 'Email address'],
                 'name' => ['type' => 'text', 'max' => 120, 'label' => 'Name'],
-                'publish_direct' => ['type' => 'bool', 'label' => 'Publish without review'],
             ],
         ],
     ];
@@ -86,6 +98,30 @@ function resources(): array
 function gallery_categories(): array
 {
     return ['Worship', 'Outreach', 'Special service', 'Bible Study', 'Fellowship', 'Building'];
+}
+
+function video_categories(): array
+{
+    return ['Worship', 'Sermon clip', 'Testimony', 'Outreach', 'Events', 'Bible Study'];
+}
+
+// Video links: TikTok share links (vm.tiktok.com/…) are opened once so the site can embed the full video address.
+function video_link(string $url): string
+{
+    $url = trim($url);
+    if (!preg_match('#^https?://(vm|vt)\.tiktok\.com/|^https?://(www\.)?tiktok\.com/t/#i', $url) || !function_exists('curl_init')) return $url;
+    try {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_NOBODY => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_TIMEOUT => 6,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; PHOMI website)']);
+        curl_exec($ch);
+        $loc = (string)curl_getinfo($ch, CURLINFO_REDIRECT_URL);
+        curl_close($ch);
+        if (preg_match('#^https://(www\.)?tiktok\.com/@[^/]+/video/\d+#', $loc, $mm)) return $mm[0];
+    } catch (Throwable $e) {
+        // keep the short link; the site shows a "Watch on TikTok" button for it
+    }
+    return $url;
 }
 
 function resource(string $name): array
@@ -140,6 +176,7 @@ function clean_fields(array $def, array $in, bool $partial = false): array
                 }
                 break;
         }
+        if ($f['type'] === 'url' && $v !== '') $v = video_link($v);
         if (is_string($v) && isset($f['max'])) $v = mb_substr($v, 0, $f['max']);
         $out[$key] = $v;
     }
@@ -171,32 +208,51 @@ function resource_create(string $name, array $in, string $source = 'admin'): arr
 {
     $def = resource($name);
     $data = clean_fields($def, $in);
+    if ($name === 'videos' && $data['link'] === '' && $data['video'] === '') throw new ApiError(422, 'Add a YouTube, TikTok or Facebook link, or upload a video file.');
     if ($name !== 'senders') $data['source'] = $source;
     $data['created_at'] = now();
     if ($name === 'senders' && row('SELECT id FROM senders WHERE email = ?', [$data['email']])) {
         throw new ApiError(409, 'That sender is already on the list.');
     }
     $id = insert($name, $data);
-    return row("SELECT * FROM $name WHERE id = ?", [$id]);
+    $r = row("SELECT * FROM $name WHERE id = ?", [$id]);
+    log_change('create', $name, $id, null, $r, 'Added ' . row_label($name, $r) . ($source === 'email' ? ' (by email, waiting for approval)' : ''));
+    return $r;
 }
 
 function resource_update(string $name, int $id, array $in): array
 {
     $def = resource($name);
-    if (!row("SELECT id FROM $name WHERE id = ?", [$id])) throw new ApiError(404, 'Not found.');
-    update($name, $id, clean_fields($def, $in, true));
-    return row("SELECT * FROM $name WHERE id = ?", [$id]);
+    $old = row("SELECT * FROM $name WHERE id = ?", [$id]);
+    if (!$old) throw new ApiError(404, 'Not found.');
+    $data = clean_fields($def, $in, true);
+    if ($name === 'videos' && ($data['link'] ?? $old['link']) === '' && ($data['video'] ?? $old['video']) === '') {
+        throw new ApiError(422, 'Add a YouTube, TikTok or Facebook link, or upload a video file.');
+    }
+    update($name, $id, $data);
+    $r = row("SELECT * FROM $name WHERE id = ?", [$id]);
+    [$b, $a] = diff_rows($old, $r);
+    if ($a) log_change('update', $name, $id, $b, $a, change_summary($name, $r, $b, $a));
+    return $r;
 }
 
+function change_summary(string $name, array $r, array $b, array $a): string
+{
+    if (array_keys($a) === ['status']) {
+        $word = ['live' => 'Published', 'hidden' => 'Hid', 'review' => 'Held for review'][$a['status']] ?? 'Changed';
+        return "$word " . row_label($name, $r);
+    }
+    return 'Edited ' . row_label($name, $r) . ' (' . implode(', ', array_map(fn($k) => str_replace('_', ' ', $k), array_keys($a))) . ')';
+}
+
+// Files are kept on delete so that the delete can be undone from the change history.
 function resource_delete(string $name, int $id): void
 {
-    $def = resource($name);
+    resource($name);
     $r = row("SELECT * FROM $name WHERE id = ?", [$id]);
     if (!$r) return;
-    foreach ($def['fields'] as $k => $f) {
-        if ($f['type'] === 'file' && !empty($r[$k])) delete_media($r[$k]);
-    }
     q("DELETE FROM $name WHERE id = ?", [$id]);
+    log_change('delete', $name, $id, $r, null, 'Deleted ' . row_label($name, $r));
 }
 
 // What every visitor's browser loads to keep the site current.
@@ -208,6 +264,7 @@ function public_content(): array
     foreach (PUBLIC_SETTINGS as $k) if ($settings[$k] !== '') $public[$k] = $settings[$k];
 
     $sermons = rows("SELECT id, title, preacher, preached_on, scripture, summary, media_url, audio, video, cover FROM sermons WHERE status = 'live' ORDER BY preached_on DESC, id DESC LIMIT 60");
+    $videos = rows("SELECT id, title, link, video, cover, category, posted_on FROM videos WHERE status = 'live' ORDER BY posted_on DESC, id DESC LIMIT 60");
     $photos = array_map(fn($p) => $p + ['thumb' => thumb_of($p['file'])],
         rows("SELECT id, file, caption, category, taken_on FROM photos WHERE status = 'live' ORDER BY created_at DESC, id DESC LIMIT 300"));
     $events = rows("SELECT id, title, kind, starts_at, ends_at, venue, details, cover FROM events WHERE status = 'live' AND (starts_at >= ? OR ends_at >= ?) ORDER BY starts_at ASC LIMIT 40", ["$today 00:00:00", "$today 00:00:00"]);
@@ -217,6 +274,7 @@ function public_content(): array
     return [
         'settings' => $public,
         'sermons' => $sermons,
+        'videos' => $videos,
         'photos' => $photos,
         'events' => $events,
         'announcements' => $news,

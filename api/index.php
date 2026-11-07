@@ -26,7 +26,7 @@ function route(string $method, string $path): void
     if ($is('GET', '/health')) {
         $db = false;
         try { db()->query('SELECT 1'); $db = true; } catch (Throwable $e) {}
-        json_out(['ok' => true, 'database' => $db, 'payments' => payment_provider() ?: 'off', 'ai' => ai_available(), 'php' => PHP_VERSION]);
+        json_out(['ok' => true, 'database' => $db, 'payments' => payment_provider() ?: 'off', 'php' => PHP_VERSION]);
         return;
     }
     if ($is('GET', '/content')) {
@@ -86,6 +86,7 @@ function route(string $method, string $path): void
         return;
     }
     $admin = require_admin();
+    actor($admin['email']);
 
     if ($method === 'GET' && $sub === '/me') {
         json_out(['admin' => $admin]);
@@ -133,11 +134,13 @@ function route(string $method, string $path): void
 
     if ($sub === '/settings') {
         if ($method === 'POST') {
+            $vals = [];
             foreach (body() as $k => $v) {
                 if (!is_scalar($v)) continue;
                 if (in_array($k, SECRET_SETTINGS, true) && $v === '') continue; // blank = keep the saved password
-                setting_set((string)$k, mb_substr(trim((string)$v), 0, 300));
+                $vals[(string)$k] = mb_substr(trim((string)$v), 0, 300);
             }
+            settings_save($vals);
         }
         $s = settings_all();
         foreach (SECRET_SETTINGS as $k) $s[$k] = $s[$k] !== '' ? '••••••••' : '';
@@ -166,6 +169,14 @@ function route(string $method, string $path): void
         $it = row('SELECT * FROM inbox WHERE id = ?', [(int)$seg[2]]);
         if (!$it) throw new ApiError(404, 'Not found.');
         json_out(inbox_apply($it, $seg[3] === 'approve'));
+        return;
+    }
+    if ($method === 'GET' && $sub === '/changes') {
+        json_out(['items' => history_list((int)($_GET['limit'] ?? 200))]);
+        return;
+    }
+    if ($method === 'POST' && ($seg[1] ?? '') === 'changes' && isset($seg[2]) && ($seg[3] ?? '') === 'undo') {
+        json_out(history_undo((int)$seg[2]));
         return;
     }
     if ($method === 'GET' && $sub === '/gifts') {
@@ -250,7 +261,6 @@ function admin_stats(): array
         'gifts_month' => (int)(row("SELECT COALESCE(SUM(amount),0) AS n FROM gifts WHERE status = 'successful' AND created_at >= ?", [$month])['n'] ?? 0),
         'gifts_count' => $c("SELECT COUNT(*) AS n FROM gifts WHERE status = 'successful' AND created_at >= ?", [$month]),
         'payments' => payment_provider() ?: 'off',
-        'ai' => ai_available(),
         'inbox_ready' => setting('imap_pass') !== '' && (setting('imap_user') ?: setting('inbox_address')) !== '',
         'last_run' => row("SELECT value FROM settings WHERE name = 'inbox_last_run'")['value'] ?? null,
     ];
@@ -291,6 +301,7 @@ function approve_page(string $method): void
     $it = null;
     try {
         if ($method === 'POST') {
+            actor('approval link');
             $r = inbox_decide($t, ($_POST['do'] ?? '') === 'approve');
             $msg = $r['status'] === 'published' ? 'Approved. It is now on the website.' : 'Rejected. It will not appear on the website.';
         } else {

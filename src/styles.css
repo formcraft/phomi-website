@@ -290,6 +290,15 @@ footer .base .in{max-width:1160px;margin:0 auto;padding:20px var(--gr) 20px var(
 .lb{position:fixed;inset:0;z-index:100;background:rgba(10,16,30,.94);display:flex;align-items:center;justify-content:center;padding:calc(56px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) calc(56px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px))}
 .lb figure{margin:0;display:flex;flex-direction:column;gap:12px;align-items:center;max-width:100%;max-height:100%}
 .lb img,.lb video{max-width:min(1100px,100%);max-height:calc(100vh - 160px);object-fit:contain;background:#000}
+.lb-embed{background:#000;max-width:100%}
+.lb-embed.wide{width:min(1100px,calc(100vw - 32px),calc((100vh - 170px) * 16 / 9));aspect-ratio:16/9}
+.lb-embed.tall{height:min(calc(100vh - 170px),740px);aspect-ratio:9/16;max-width:calc(100vw - 32px)}
+.lb-embed iframe{width:100%;height:100%;border:0;display:block}
+.lb-link{position:relative;display:flex;align-items:center;justify-content:center}
+.lb-link img{max-height:calc(100vh - 220px);opacity:.55}
+.lb-link .btn{position:absolute}
+.clip .site{position:absolute;left:10px;top:10px;background:var(--shade);color:var(--white);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px}
+.feature .player.tall{max-width:380px;aspect-ratio:9/16}
 .lb figcaption{color:var(--onDark);font-size:14px;text-align:center}
 .lb .x,.lb .pv,.lb .nx{position:absolute;width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(27,42,71,.7);color:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .lb .x{top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px))}
@@ -344,3 +353,4 @@ footer .base .in{max-width:1160px;margin:0 auto;padding:20px var(--gr) 20px var(
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(160,50,7,.45)}50%{box-shadow:0 0 0 14px rgba(160,50,7,0)}}
 @media (prefers-reduced-motion: reduce){.pulse{animation:none}}
 .btn[disabled]{opacity:.6;cursor:wait;transform:none}
+.sermon .player.tall{aspect-ratio:9/16;max-width:320px;background:#0E1626}

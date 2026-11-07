@@ -18,19 +18,14 @@ jobs:
         with:
           php-version: '8.2'
           extensions: curl, gd, mbstring, fileinfo, openssl, pdo_mysql, pdo_sqlite
-          tools: composer:v2
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: Install the PHP libraries (Claude reader)
-        working-directory: api
-        run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
-
       - name: Check PHP syntax
-        run: find api -name '*.php' -not -path 'api/vendor/*' -print0 | xargs -0 -n1 php -l > /dev/null
+        run: find api -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
 
       - name: API tests (SQLite, mock payments, fake mailbox)
         run: python3 api/tests/test_api.py

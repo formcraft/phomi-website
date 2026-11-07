@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Banner, ClipCard, Tbc } from '../components/ui.jsx';
-import { CHURCH, CLIPS, img, video } from '../data.js';
-import { niceDate, useLive, youtubeEmbed } from '../live.jsx';
+import { Banner, ClipCard, Tbc, useClips } from '../components/ui.jsx';
+import { CHURCH, img, video } from '../data.js';
+import { linkSite, niceDate, useLive, videoEmbed } from '../live.jsx';
 
 function Media({ s }) {
-  const yt = youtubeEmbed(s.media_url);
+  const em = videoEmbed(s.media_url);
   if (s.video) {
     return (
       <video controls playsInline preload="none" poster={s.cover || img('v-sunday-service')}>
@@ -13,7 +13,7 @@ function Media({ s }) {
       </video>
     );
   }
-  if (yt) return <iframe src={yt} title={s.title} allow="encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />;
+  if (em) return <iframe src={em.src} title={s.title} allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" />;
   return <img src={s.cover || img('sunday-pulpit')} alt="" />;
 }
 
@@ -26,8 +26,8 @@ function Listen({ s }) {
   return (
     <>
       {s.audio && <audio controls preload="none" src={s.audio} style={{ width: '100%' }}>Your browser cannot play this audio.</audio>}
-      {s.media_url && !youtubeEmbed(s.media_url) && (
-        <div className="btn-row"><a className="btn btn-navy" href={s.media_url} target="_blank" rel="noopener noreferrer">Watch the message</a></div>
+      {s.media_url && !videoEmbed(s.media_url) && (
+        <div className="btn-row"><a className="btn btn-navy" href={s.media_url} target="_blank" rel="noopener noreferrer">Watch on {linkSite(s.media_url)}</a></div>
       )}
     </>
   );
@@ -44,8 +44,8 @@ function SermonCard({ s }) {
         <Byline s={s} />
         {s.summary && <p className="sum">{open || !long ? s.summary : s.summary.slice(0, 220).trim() + '…'}</p>}
         {long && <button type="button" className="linkbtn" onClick={() => setOpen(!open)}>{open ? 'Show less' : 'Read more'}</button>}
-        {(s.video || youtubeEmbed(s.media_url)) && open && <div className="player wide"><Media s={s} /></div>}
-        {(s.video || youtubeEmbed(s.media_url)) && !open && <button type="button" className="linkbtn" onClick={() => setOpen(true)}>Watch</button>}
+        {(s.video || videoEmbed(s.media_url)) && open && <div className={'player ' + (videoEmbed(s.media_url)?.shape === 'tall' && !s.video ? 'tall' : 'wide')}><Media s={s} /></div>}
+        {(s.video || videoEmbed(s.media_url)) && !open && <button type="button" className="linkbtn" onClick={() => setOpen(true)}>Watch</button>}
         <Listen s={s} />
       </div>
     </article>
@@ -57,9 +57,10 @@ export default function Sermons() {
   const [q, setQ] = useState('');
   const term = q.trim().toLowerCase();
   const latest = sermons[0];
-  const list = CLIPS.filter((c) => !term || `${c.t} ${c.k} ${c.p}`.toLowerCase().includes(term));
+  const clips = useClips();
+  const list = clips.filter((c) => !term || `${c.title} ${c.kind} ${c.desc}`.toLowerCase().includes(term));
   const found = sermons.slice(1).filter((s) => !term || `${s.title} ${s.preacher} ${s.scripture} ${s.summary}`.toLowerCase().includes(term));
-  const portrait = !latest || latest.video;
+  const portrait = !latest || latest.video || videoEmbed(latest.media_url)?.shape === 'tall';
   return (
     <>
       <Banner photo="outdoor-service" eyebrow="The Word preached" title="Sermons" crumb="Sermons" />
@@ -88,7 +89,11 @@ export default function Sermons() {
                 <p className="lead">A moment from Sunday service in the hall at Burweta. Full messages are shared live on our Facebook page.</p>
               </>
             )}
-            <div className="btn-row"><a className="btn btn-light" href={CHURCH.facebook} target="_blank" rel="noopener noreferrer">Watch live on Facebook</a></div>
+            <div className="btn-row">
+              <a className="btn btn-light" href={CHURCH.facebook} target="_blank" rel="noopener noreferrer">Watch live on Facebook</a>
+              {CHURCH.youtube && <a className="btn btn-light" href={CHURCH.youtube} target="_blank" rel="noopener noreferrer">Our YouTube channel</a>}
+              {CHURCH.tiktok && <a className="btn btn-light" href={CHURCH.tiktok} target="_blank" rel="noopener noreferrer">Follow on TikTok</a>}
+            </div>
           </div>
         </div>
       </section>
@@ -111,7 +116,7 @@ export default function Sermons() {
           )}
           {sermons.length > 1 && <h3 className="h3" style={{ margin: '48px 0 20px' }}>Recent Moments</h3>}
           <div className="clips">
-            {list.length ? list.map((c) => <ClipCard key={c.v} clip={c} />) : (
+            {list.length ? list.map((c) => <ClipCard key={c.key} clip={c} list={list} />) : (
               <div className="empty" style={{ gridColumn: '1/-1' }}>No videos match “{q}”. Try worship, outreach or children.</div>
             )}
           </div>

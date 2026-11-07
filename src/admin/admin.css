@@ -99,3 +99,4 @@
   .adm-stats{grid-template-columns:1fr 1fr}
   .adm-stats b{font-size:21px}
 }
+.adm-list li.undone{opacity:.55}

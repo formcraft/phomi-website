@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { useOverlay } from './Overlay.jsx';
 import { CHURCH, CLIPS, PHOTOS, TIMES, img } from '../data.js';
-import { useLive } from '../live.jsx';
+import { linkSite, niceDate, useLive, videoEmbed } from '../live.jsx';
 
 // Marks content the church still needs to supply. Shows as a gold highlight.
 export function Tbc({ children }) {
@@ -104,20 +104,49 @@ export function MapCard() {
   );
 }
 
-export function ClipCard({ clip }) {
+// Every short video on the site: ones added in the admin page or by email (YouTube, TikTok, Facebook or an MP4)
+// come first, then the built-in clips.
+export function useClips() {
+  const { videos = [] } = useLive();
+  const live = videos.map((v) => {
+    const e = videoEmbed(v.link);
+    const cap = `${v.title} · ${v.category}`;
+    const item = v.video
+      ? { type: 'video', name: v.video, poster: v.cover || '', cap }
+      : e
+        ? { type: 'embed', src: e.src, shape: e.shape, cap }
+        : { type: 'link', href: v.link, site: linkSite(v.link), poster: v.cover, cap };
+    return {
+      key: 'v' + v.id,
+      title: v.title,
+      kind: v.category,
+      desc: [niceDate(v.posted_on), v.video ? '' : e?.site || linkSite(v.link)].filter(Boolean).join(' · '),
+      site: v.video ? '' : e?.site || linkSite(v.link),
+      thumb: v.cover || e?.thumb || img('v-hall-worship'),
+      item,
+    };
+  });
+  const built = CLIPS.map((c) => ({
+    key: c.v, title: c.t, kind: c.k, desc: c.p, dur: c.d, thumb: img('v-' + c.v),
+    item: { type: 'video', name: c.v, cap: `${c.t} · ${c.k}` },
+  }));
+  return [...live, ...built];
+}
+
+export function ClipCard({ clip, list }) {
   const { open } = useOverlay();
-  const items = CLIPS.map((c) => ({ type: 'video', name: c.v, cap: `${c.t} · ${c.k}` }));
   return (
-    <button className="clip" type="button" onClick={() => open(items, CLIPS.indexOf(clip))}>
+    <button className="clip" type="button" onClick={() => open(list.map((c) => c.item), Math.max(0, list.indexOf(clip)))}>
       <div className="th">
-        <Photo name={'v-' + clip.v} />
+        <img src={clip.thumb} alt="" loading="lazy" decoding="async" />
         <div className="play"><span><Icon name="play" size={24} /></span></div>
-        <span className="dur">{clip.d}</span>
+        {clip.site && <span className="site">{clip.site}</span>}
+        {clip.dur && <span className="dur">{clip.dur}</span>}
       </div>
       <div className="bd">
-        <p className="kind">{clip.k}</p>
-        <h3>{clip.t}</h3>
-        <p>{clip.p}</p>
+        <p className="kind">{clip.kind}</p>
+        <h3>{clip.title}</h3>
+        {clip.desc && <p>{clip.desc}</p>}
       </div>
     </button>
   );

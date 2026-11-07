@@ -24,7 +24,7 @@ The website stays at **https://pottershouseoutreachministriesinternational.com**
 
 1. Open hPanel → Files → File Manager. Go **one folder above** `public_html` (the folder named after the domain).
 2. Create a file called `phomi-config.php` there. Copy the contents of [`api/config.sample.php`](../api/config.sample.php) into it.
-3. Fill in: the database name, user and password from 1.7; three long random strings for `app_key`, `install_token` and `cron_token` (use a password generator, 40+ characters each); the payment and Claude keys when you have them (sections 4 and 5).
+3. Fill in: the database name, user and password from 1.7; three long random strings for `app_key`, `install_token` and `cron_token` (use a password generator, 40+ characters each); the payment keys when you have them (section 4).
 4. After the first deploy, open `https://pottershouseoutreachministriesinternational.com/api/install.php?token=<your install_token>` and create the first admin account. That page also checks the server has everything it needs.
 
 ## 3. Church email for automatic updates
@@ -34,7 +34,7 @@ The website stays at **https://pottershouseoutreachministriesinternational.com**
 | 3.1 | Create a mailbox, for example **updates@pottershouseoutreachministriesinternational.com**, and keep its password | hPanel → Emails → Email Accounts. Any name works |
 | 3.2 | Enter the address and password in **Admin → Settings → Update mailbox**, then press **Save and test the mailbox** | The password is stored encrypted |
 | 3.3 | The **list of approved senders**: name and email address of each person allowed to post (pastor, media team, church secretary) | Admin → Approved senders. Mail from anyone else is ignored |
-| 3.4 | For each sender: may they **publish straight away**, or should their emails wait for one-tap approval? | Default is wait for approval |
+| 3.4 | Who will **approve** emailed updates? Every update waits for an admin to approve it before it shows | Each approver needs an admin account (Admin → Account) |
 | 3.5 | Who receives **alerts** (approval requests, prayer requests, website messages, gifts)? One or more email addresses | Admin → Settings → Send alerts to |
 | 3.6 | Cron job: every 5 minutes, command `/usr/bin/php /home/<user>/domains/pottershouseoutreachministriesinternational.com/public_html/api/cron/inbox.php` | hPanel → Advanced → Cron Jobs. The exact path is shown in File Manager |
 | 3.7 | Decision: a **WhatsApp Business number** for updates later? It needs a spare SIM that is not already on WhatsApp and a Meta Business account | Optional, after email works |
@@ -56,19 +56,22 @@ The site is built to work with **Yo! Payments** (Ugandan, sends the MTN/Airtel P
 | 4.9 | **Bank transfer details**: bank, branch, account name, account number; **SWIFT code** for gifts from abroad | Admin → Settings → Giving details |
 | 4.10 | Decide the **minimum and maximum** gift by phone (now UGX 500 to 5,000,000) | Change in `phomi-config.php` → payments → min / max |
 
-## 5. Claude (reads untagged emails and writes captions)
+## 5. Videos (YouTube and TikTok)
 
 | # | What | Notes |
 |---|------|-------|
-| 5.1 | An account at **platform.claude.com** (Anthropic Console), with a payment card and a small prepaid credit | Church volumes cost very little |
-| 5.2 | Create an **API key** and paste it into `phomi-config.php` → `anthropic` → `api_key` | Without it, emails still work when they have a tag such as "Sermon:" |
+| 5.1 | The church's **YouTube channel** link (create one with the church Google account if there is none) | Admin → Settings → Video and social pages |
+| 5.2 | The church's **TikTok** account link | Same place |
+| 5.3 | Who uploads videos to YouTube/TikTok, and are they on the approved senders list so they can email the links with "Video:"? | Admin → Approved senders |
+
+No AI service or API key is needed anywhere. The site runs on plain scripts.
 
 ## 6. GitHub (automatic deploys)
 
 | # | What | Notes |
 |---|------|-------|
 | 6.1 | Add repository secrets **FTP_SERVER**, **FTP_USERNAME**, **FTP_PASSWORD** from step 1.8 | github.com/formcraft/phomi-website → Settings → Secrets and variables → Actions |
-| 6.2 | Merge the pull request into `main`. Every push to `main` then tests, builds and uploads the site | The first upload takes longer (many small library files) |
+| 6.2 | Merge the pull request into `main`. Every push to `main` then tests, builds and uploads the site | Free: GitHub Actions costs nothing for a public repository. No paid GitHub plan or CLI needed. Or skip this and upload `dist/` by hand |
 
 ## 7. Church content still to confirm
 
@@ -80,8 +83,8 @@ The site is built to work with **Yo! Payments** (Ugandan, sends the MTN/Airtel P
 | 7.4 | The correct **WhatsApp number**. The old site shows two different numbers: +256 775 672 762 and +256 775 672 562 | Admin → Settings → Contact details |
 | 7.5 | Confirm the **village spelling**: Burweta (used now) or Bureta | Site text |
 | 7.6 | **Directions**: distance from Mbale town and a landmark, and a Google Maps pin of the church | Contact page |
-| 7.7 | **Instagram and TikTok** links, if any | Footer |
-| 7.8 | The first few **sermons**: title, preacher, date, scripture, and audio/video or a YouTube/Facebook link | Email them with "Sermon:" or add them in Admin → Sermons |
+| 7.7 | **Instagram** link, if any | Admin → Settings → Video and social pages |
+| 7.8 | The first few **sermons**: title, preacher, date, scripture, and audio/video or a YouTube, TikTok or Facebook link | Email them with "Sermon:" or add them in Admin → Sermons |
 | 7.9 | Upcoming **events** with dates | Email with "Event:" or Admin → Events |
 | 7.10 | **Testimonies**, with each person's permission to publish | Admin → Testimonies |
 | 7.11 | **Registration details** for the footer (e.g. "Registered NGO no. …") if the church wants them shown | Footer |

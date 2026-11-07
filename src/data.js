@@ -17,6 +17,7 @@ export const CHURCH = {
   facebook: 'https://www.facebook.com/share/19w99MmbKY/',
   instagram: '', // add link when ready
   tiktok: '', // add link when ready
+  youtube: '', // the church's YouTube channel, when ready
   mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Burweta%2C+Butebo+District%2C+Uganda'
 };
 

@@ -43,11 +43,6 @@ return [
         'max' => 5000000,
     ],
 
-    // Claude reads untagged emails and writes titles and captions
-    'anthropic' => [
-        'api_key' => '',
-        'model' => 'claude-opus-5-5',
-    ],
 
     // Sender for replies and alerts. Hostinger mail works with PHP mail() when this is a mailbox on the domain.
     'mail_from' => 'church@pottershouseoutreachministriesinternational.com',

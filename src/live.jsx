@@ -5,7 +5,7 @@ import { BANK, CHURCH, MOMO, TIMES } from './data.js';
 // The built-in content in data.js shows first and stays as a backup if the server can't be reached.
 
 const KEY = 'phomi-live-v1';
-const EMPTY = { sermons: [], photos: [], events: [], announcements: [], testimonies: [], settings: {}, payments: 'ussd', ready: false };
+const EMPTY = { sermons: [], videos: [], photos: [], events: [], announcements: [], testimonies: [], settings: {}, payments: 'ussd', ready: false };
 const Live = createContext(EMPTY);
 
 function applySettings(s = {}) {
@@ -21,6 +21,10 @@ function applySettings(s = {}) {
   }
   if (s.phones) CHURCH.phones = s.phones.split(/[,;\n]+/).map((p) => p.trim()).filter(Boolean);
   set(CHURCH, 'email', s.email);
+  set(CHURCH, 'facebook', s.facebook);
+  set(CHURCH, 'youtube', s.youtube);
+  set(CHURCH, 'tiktok', s.tiktok);
+  set(CHURCH, 'instagram', s.instagram);
   set(MOMO.mtn, 'num', s.momo_mtn_number);
   set(MOMO.mtn, 'reg', s.momo_mtn_name);
   set(MOMO.airtel, 'num', s.momo_airtel_number);
@@ -103,7 +107,33 @@ export function eventCard(e) {
 }
 
 // YouTube link → embeddable URL, or null
+// Turns a YouTube, TikTok or Facebook link into something the page can play in place.
+// shape: 'wide' (16:9) or 'tall' (9:16, for Shorts, TikTok and Reels). Returns null for other links.
+export function videoEmbed(url) {
+  const u = String(url || '').trim();
+  let m = u.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|live\/|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/);
+  if (m) {
+    return { site: 'YouTube', shape: /\/shorts\//.test(u) ? 'tall' : 'wide', src: `https://www.youtube-nocookie.com/embed/${m[1]}?rel=0`, thumb: `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg` };
+  }
+  m = u.match(/tiktok\.com\/(?:@[\w.-]+\/video|embed(?:\/v2)?|player\/v1)\/(\d{6,})/);
+  if (m) return { site: 'TikTok', shape: 'tall', src: `https://www.tiktok.com/player/v1/${m[1]}?rel=0&description=0`, thumb: '' };
+  if (/^https:\/\/(www\.|m\.)?(facebook\.com|fb\.watch)\//.test(u) && /\/(videos?|watch|reel|share\/[rv])\b|fb\.watch/.test(u)) {
+    const tall = /\/(reel|share\/r)\b/.test(u);
+    return { site: 'Facebook', shape: tall ? 'tall' : 'wide', src: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(u)}&show_text=false`, thumb: '' };
+  }
+  return null;
+}
+
+// Name of the site a link points to, for "Watch on …" buttons.
+export function linkSite(url) {
+  const u = String(url || '');
+  if (/tiktok\.com/.test(u)) return 'TikTok';
+  if (/youtu\.?be/.test(u)) return 'YouTube';
+  if (/facebook\.com|fb\.watch/.test(u)) return 'Facebook';
+  return 'the web';
+}
+
 export function youtubeEmbed(url) {
-  const m = String(url || '').match(/(?:youtube\.com\/(?:watch\?v=|live\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
-  return m ? `https://www.youtube-nocookie.com/embed/${m[1]}` : null;
+  const e = videoEmbed(url);
+  return e && e.site === 'YouTube' ? e.src : null;
 }

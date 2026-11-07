@@ -9,8 +9,6 @@ const SETTING_DEFAULTS = [
     'imap_port' => '993',
     'imap_user' => '',
     'imap_pass' => '', // stored encrypted
-    'publish_mode' => 'review', // 'auto' publishes straight away, 'review' waits for one-tap approval
-    'ai_enabled' => '1',
     'notify_email' => '', // who gets alerts about prayer requests, messages and gifts
 
     // Church details shown on the site (blank = use the built-in text)
@@ -22,6 +20,10 @@ const SETTING_DEFAULTS = [
     'whatsapp' => '',
     'phones' => '',
     'email' => '',
+    'facebook' => '',
+    'youtube' => '',
+    'tiktok' => '',
+    'instagram' => '',
     'momo_mtn_number' => '',
     'momo_mtn_name' => '',
     'momo_airtel_number' => '',
@@ -34,7 +36,7 @@ const SETTING_DEFAULTS = [
 // Settings that are safe to show to every visitor
 const PUBLIC_SETTINGS = [
     'times_sunday', 'times_prayer_day', 'times_prayer_time', 'times_bible_day', 'times_bible_time',
-    'whatsapp', 'phones', 'email', 'momo_mtn_number', 'momo_mtn_name', 'momo_airtel_number', 'momo_airtel_name',
+    'whatsapp', 'phones', 'email', 'facebook', 'youtube', 'tiktok', 'instagram', 'momo_mtn_number', 'momo_mtn_name', 'momo_airtel_number', 'momo_airtel_name',
     'bank_name', 'bank_account', 'bank_swift',
 ];
 
@@ -66,6 +68,37 @@ function setting_set(string $name, string $value): void
     } else {
         insert('settings', ['name' => $name, 'value' => $value]);
     }
+}
+
+// The stored value as saved (secrets stay encrypted). Used by the change history.
+function setting_raw(string $name): string
+{
+    $v = row('SELECT value FROM settings WHERE name = ?', [$name]);
+    return $v ? (string)$v['value'] : (SETTING_DEFAULTS[$name] ?? '');
+}
+
+function setting_store(string $name, string $value): void
+{
+    if (row('SELECT id FROM settings WHERE name = ?', [$name])) q('UPDATE settings SET value = ? WHERE name = ?', [$value, $name]);
+    else insert('settings', ['name' => $name, 'value' => $value]);
+}
+
+// Saves several settings at once and records them in the change history (passwords are never recorded).
+function settings_save(array $values, string $summary = ''): void
+{
+    $before = [];
+    $after = [];
+    foreach ($values as $k => $v) {
+        if (!array_key_exists($k, SETTING_DEFAULTS)) continue;
+        $old = setting_raw($k);
+        setting_set($k, (string)$v);
+        if (in_array($k, SECRET_SETTINGS, true)) continue;
+        if ($old !== (string)$v) {
+            $before[$k] = $old;
+            $after[$k] = (string)$v;
+        }
+    }
+    if ($after) log_change('settings', 'settings', null, $before, $after, $summary ?: 'Changed ' . implode(', ', array_map(fn($k) => str_replace('_', ' ', $k), array_keys($after))));
 }
 
 function app_key(): string

@@ -12,13 +12,15 @@ const SECTIONS = [
   ['dashboard', 'Overview', 'church'],
   ['inbox', 'Emailed updates', 'inbox'],
   ['sermons', 'Sermons', 'book'],
-  ['photos', 'Gallery', 'video'],
+  ['videos', 'Videos', 'play'],
+  ['photos', 'Gallery', 'image'],
   ['events', 'Events', 'clock'],
   ['announcements', 'Announcements', 'bell'],
   ['testimonies', 'Testimonies', 'heart'],
   ['gifts', 'Giving', 'gift'],
   ['messages', 'Prayer & messages', 'chat'],
   ['senders', 'Approved senders', 'users'],
+  ['history', 'History & undo', 'refresh'],
   ['settings', 'Settings', 'cog'],
   ['account', 'Account', 'out']
 ];
@@ -35,6 +37,7 @@ function useHash() {
 }
 
 const when = (s) => (s ? new Date(s.replace(' ', 'T')).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+const linkName = (it) => (it.video ? 'Video file' : /tiktok/.test(it.link) ? 'TikTok' : /youtu/.test(it.link) ? 'YouTube' : /facebook|fb\.watch/.test(it.link) ? 'Facebook' : 'Link');
 const day = (s) => (s ? new Date(s.slice(0, 10) + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 
 function Note({ kind = 'info', children }) {
@@ -144,8 +147,8 @@ function Field({ name, f, value, onChange }) {
 
 // ---------- Generic section (sermons, photos, events, announcements, testimonies, senders) ----------
 
-const TITLE_KEY = { sermons: 'title', photos: 'caption', events: 'title', announcements: 'title', testimonies: 'title', senders: 'email' };
-const DATE_KEY = { sermons: 'preached_on', photos: 'taken_on', events: 'starts_at', announcements: 'ends_on', testimonies: 'created_at', senders: 'created_at' };
+const TITLE_KEY = { sermons: 'title', videos: 'title', photos: 'caption', events: 'title', announcements: 'title', testimonies: 'title', senders: 'email' };
+const DATE_KEY = { sermons: 'preached_on', videos: 'posted_on', photos: 'taken_on', events: 'starts_at', announcements: 'ends_on', testimonies: 'created_at', senders: 'created_at' };
 
 function Editor({ res, def, item, onSaved, onCancel }) {
   const blank = useMemo(() => Object.fromEntries(Object.entries(def.fields).map(([k, f]) => [k, f.default ?? (f.type === 'bool' ? 0 : '')])), [def]);
@@ -233,7 +236,7 @@ function ResourceSection({ res, schema }) {
   useEffect(() => { const t = setTimeout(load, q ? 250 : 0); return () => clearTimeout(t); }, [load, q]);
 
   const remove = async (it) => {
-    if (!window.confirm(`Delete "${it[TITLE_KEY[res]] || 'this item'}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete "${it[TITLE_KEY[res]] || 'this item'}"? You can undo this under History & undo.`)) return;
     await api(`/admin/r/${res}/${it.id}/delete`, { method: 'POST', body: {} }).catch((x) => setErr(x.message));
     load();
   };
@@ -253,7 +256,10 @@ function ResourceSection({ res, schema }) {
         <button className="adm-btn primary" onClick={() => setEdit('new')}><Icon name="plus" size={16} /> Add</button>
       </div>
       {res === 'senders' && (
-        <Note>People on this list can email updates to the church update address. Others are ignored. Tick <b>Publish without review</b> for people you trust to post straight to the site.</Note>
+        <Note>People on this list can email updates to the church update address. Others are ignored. Every emailed update waits in <a href="#inbox">Emailed updates</a> until an admin approves it.</Note>
+      )}
+      {res === 'videos' && (
+        <Note>Paste a YouTube, TikTok or Facebook video link, or upload a short MP4. Videos show under Recent Moments on the Sermons and Home pages.</Note>
       )}
       {res === 'photos' && <BulkPhotos categories={schema.categories} onDone={load} />}
       <div className="adm-filters">
@@ -274,9 +280,9 @@ function ResourceSection({ res, schema }) {
               <div className="txt">
                 <strong>{it[TITLE_KEY[res]] || <em>No caption</em>}</strong>
                 <span>
-                  {[res === 'photos' ? it.category : null, res === 'sermons' ? it.preacher : null, res === 'senders' ? it.name : null,
+                  {[res === 'photos' || res === 'videos' ? it.category : null, res === 'videos' ? linkName(it) : null, res === 'sermons' ? it.preacher : null, res === 'senders' ? it.name : null,
                     DATE_KEY[res] === 'starts_at' ? when(it.starts_at) : day(it[DATE_KEY[res]]),
-                    it.source === 'email' ? 'by email' : null, res === 'senders' && Number(it.publish_direct) ? 'publishes directly' : null].filter(Boolean).join(' · ')}
+                    it.source === 'email' ? 'by email' : null].filter(Boolean).join(' · ')}
                 </span>
               </div>
               {hasStatus && <Badge s={it.status} />}
@@ -309,10 +315,11 @@ function TagHelp({ address }) {
           <tr><td>Event:</td><td>Event: Youth crusade</td><td>Events page. Add "Date: 14 Dec 2026", "Time: 2pm", "Venue: …".</td></tr>
           <tr><td>Announcement:</td><td>Announcement: No evening prayer this Friday</td><td>Banner on every page. Add "Until: 20 Dec" to choose when it ends.</td></tr>
           <tr><td>Times:</td><td>Times: new prayer time</td><td>Weekly times. Lines like "Prayer day: Wednesday", "Prayer time: 6:30pm – 8:30pm".</td></tr>
+          <tr><td>Video:</td><td>Video: Outreach, Kibuku songs</td><td>Videos (Recent Moments). Paste one or more YouTube, TikTok or Facebook links, or attach a short MP4. A category first is optional.</td></tr>
           <tr><td>Testimony:</td><td>Testimony: Healed after prayer</td><td>Testimonies, always checked before they show.</td></tr>
         </tbody>
       </table>
-      <p className="adm-muted">No tag? Claude reads the email and decides where it belongs, or holds it here for you to check.</p>
+      <p className="adm-muted">No tag? The website makes a best guess from the email (preacher or audio means a sermon, a YouTube or TikTok link means a video, photos only means the gallery). Nothing goes on the site until an admin approves it here or with the link in the alert email. If it can't tell, the sender gets a reply asking for a tag.</p>
     </div>
   );
 }
@@ -479,8 +486,6 @@ const SETTING_GROUPS = [
     ['imap_pass', 'Mailbox password', 'password', ''],
     ['imap_host', 'Mail server', 'text', 'imap.hostinger.com'],
     ['imap_port', 'Port', 'text', '993'],
-    ['publish_mode', 'When an approved person emails an update', 'select:review=Hold it for one-tap approval|auto=Publish it straight away', ''],
-    ['ai_enabled', 'Let Claude read untagged emails and write captions', 'select:1=Yes|0=No', ''],
     ['notify_email', 'Send alerts (approvals, prayer requests, gifts) to', 'text', 'pastor@example.com, office@example.com']
   ]],
   ['Weekly times', 'Shown across the site. Leave blank to keep the current wording.', [
@@ -494,6 +499,12 @@ const SETTING_GROUPS = [
     ['phones', 'Phone numbers (comma between them)', 'text', '+256 772 496 781, +256 761 838 682'],
     ['whatsapp', 'WhatsApp number', 'text', '+256 775 672 762'],
     ['email', 'Public email address', 'email', 'church@pottershouseoutreachministriesinternational.com']
+  ]],
+  ['Video and social pages', 'Links to the church pages. They show in the footer and on the Sermons page.', [
+    ['youtube', 'YouTube channel', 'url', 'https://www.youtube.com/@yourchurch'],
+    ['tiktok', 'TikTok page', 'url', 'https://www.tiktok.com/@yourchurch'],
+    ['facebook', 'Facebook page', 'url', 'https://www.facebook.com/…'],
+    ['instagram', 'Instagram', 'url', 'https://www.instagram.com/…']
   ]],
   ['Giving details', 'The registered Mobile Money names let givers check they are paying the church.', [
     ['momo_mtn_number', 'MTN MoMo number', 'text', '0772 000000'],
@@ -639,6 +650,49 @@ function Account({ admin, onOut }) {
   );
 }
 
+// ---------- History & undo ----------
+
+const ACTION_WORD = { create: 'Added', update: 'Changed', delete: 'Deleted', settings: 'Settings' };
+
+function History() {
+  const [items, setItems] = useState(null);
+  const [info, setInfo] = useState(null);
+  const load = useCallback(() => api('/admin/changes').then((r) => setItems(r.items)).catch((x) => setInfo({ kind: 'error', text: x.message })), []);
+  useEffect(() => { load(); }, [load]);
+  const undo = async (c) => {
+    if (!window.confirm(`Undo this change?\n\n${c.summary}`)) return;
+    try {
+      await api(`/admin/changes/${c.id}/undo`, { method: 'POST', body: {} });
+      setInfo({ kind: 'ok', text: 'Undone. The website shows the earlier version again.' });
+    } catch (x) {
+      setInfo({ kind: 'error', text: x.message });
+    }
+    load();
+  };
+  return (
+    <>
+      <div className="adm-head"><h1>History &amp; undo</h1><button className="adm-btn" onClick={load}><Icon name="refresh" size={16} /> Refresh</button></div>
+      <Note>Every change to the website is listed here, newest first, with who made it. Undo puts things back the way they were before that change. If something was changed again later, undo the later change first.</Note>
+      {info && <Note kind={info.kind}>{info.text}</Note>}
+      {!items ? <p>Loading…</p> : !items.length ? <div className="adm-empty">No changes yet.</div> : (
+        <ul className="adm-list">
+          {items.map((c) => (
+            <li key={c.id} className={c.undone_at ? 'undone' : ''}>
+              <div className="txt">
+                <strong>{c.summary}</strong>
+                <span>{[ACTION_WORD[c.action] || c.action, when(c.created_at), c.actor, c.undone_at ? `undone ${when(c.undone_at)} by ${c.undone_by}` : null].filter(Boolean).join(' · ')}</span>
+              </div>
+              <div className="acts">
+                {!c.undone_at && !c.summary.startsWith('Undid') && <button className="adm-btn small ghost" onClick={() => undo(c)}>Undo</button>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
 // ---------- Overview ----------
 
 function Dashboard() {
@@ -647,8 +701,7 @@ function Dashboard() {
   if (!s) return <p>Loading…</p>;
   const checks = [
     [s.inbox_ready, 'Update mailbox connected', 'settings'],
-    [s.payments !== 'off', s.payments !== 'off' ? `Phone prompts for giving are on (${s.payments === 'yo' ? 'Yo! Payments' : s.payments})` : 'Phone prompts for giving are off: givers use the dial code for now', 'gifts'],
-    [s.ai, s.ai ? 'Claude reads untagged emails' : 'Claude is not set up: emails need a tag such as "Sermon:"', 'settings']
+    [s.payments !== 'off', s.payments !== 'off' ? `Phone prompts for giving are on (${s.payments === 'yo' ? 'Yo! Payments' : s.payments})` : 'Phone prompts for giving are off: givers use the dial code for now', 'gifts']
   ];
   return (
     <>
@@ -712,6 +765,7 @@ export default function Admin() {
   else if (current === 'gifts') body = <Gifts />;
   else if (current === 'messages') body = <Messages />;
   else if (current === 'settings') body = <Settings />;
+  else if (current === 'history') body = <History />;
   else if (current === 'account') body = <Account admin={admin} onOut={() => setAdmin(null)} />;
   else body = <ResourceSection key={current} res={current} schema={schema} />;
 

@@ -9,7 +9,9 @@ declare(strict_types=1);
 //   Announcement: No evening prayer this Friday
 //   Times: Prayer moves to Wednesday
 //   Testimony: Healed after prayer
-// Untagged mail is read by Claude, which decides where it belongs (or holds it for review).
+//   Video: Sunday choir (with YouTube or TikTok links in the email, or an MP4 attached)
+// Nothing goes live by itself: every emailed update waits for an admin to approve it.
+// Untagged mail is sorted by simple keyword rules (no AI).
 
 const TAGS = [
     'sermon' => 'sermon', 'sermons' => 'sermon', 'message' => 'sermon', 'preaching' => 'sermon',
@@ -18,10 +20,11 @@ const TAGS = [
     'announcement' => 'announcement', 'news' => 'announcement', 'notice' => 'announcement',
     'times' => 'times', 'time' => 'times', 'schedule' => 'times',
     'testimony' => 'testimony', 'testimonies' => 'testimony',
+    'video' => 'video', 'videos' => 'video', 'clip' => 'video', 'clips' => 'video', 'youtube' => 'video', 'tiktok' => 'video',
 ];
 
-const KIND_TABLE = ['sermon' => 'sermons', 'photo' => 'photos', 'event' => 'events', 'announcement' => 'announcements', 'testimony' => 'testimonies', 'times' => 'settings'];
-const KIND_PAGE = ['sermon' => '/sermons', 'photo' => '/gallery', 'event' => '/events', 'announcement' => '/', 'testimony' => '/', 'times' => '/events'];
+const KIND_TABLE = ['sermon' => 'sermons', 'photo' => 'photos', 'event' => 'events', 'announcement' => 'announcements', 'testimony' => 'testimonies', 'video' => 'videos', 'times' => 'settings'];
+const KIND_PAGE = ['sermon' => '/sermons', 'photo' => '/gallery', 'event' => '/events', 'announcement' => '/', 'testimony' => '/', 'video' => '/sermons', 'times' => '/events'];
 const MAX_PER_SENDER_PER_DAY = 40;
 
 // Reads new mail. Called by the cron job every 5 minutes.
@@ -45,14 +48,8 @@ function ingest_run(int $max = 25): array
         $imap->markSeen($uid); // never read the same email twice, even if it failed
     }
     $imap->close();
-    setting_set_raw('inbox_last_run', now());
+    setting_store('inbox_last_run', now());
     return ['ok' => true, 'processed' => count($done), 'items' => $done];
-}
-
-function setting_set_raw(string $name, string $value): void
-{
-    if (row('SELECT id FROM settings WHERE name = ?', [$name])) q('UPDATE settings SET value = ? WHERE name = ?', [$value, $name]);
-    else insert('settings', ['name' => $name, 'value' => $value]);
 }
 
 function ingest_message(string $raw): array
@@ -75,6 +72,7 @@ function ingest_message(string $raw): array
     }
 
     $sender = row('SELECT * FROM senders WHERE email = ?', [$from]);
+    actor('email: ' . $from);
     if (!$sender) {
         // Unknown senders get no reply (avoids spam backscatter). The admin sees them in the inbox log.
         return ingest_log($log, 'rejected', 'Sender is not on the approved list');
@@ -101,49 +99,32 @@ function ingest_message(string $raw): array
         }
     }
 
-    // Claude reads the email: decides the kind if untagged, and writes tidy titles and captions
-    $ai = null;
-    if (setting('ai_enabled') === '1') {
-        $thumbs = [];
-        foreach (array_slice($media['image'], 0, 4) as $img) {
-            $path = rtrim((string)config('uploads_dir'), '/') . substr($img['thumb'], strlen(rtrim((string)config('uploads_url'), '/')));
-            if (is_file($path)) $thumbs[] = file_get_contents($path);
-        }
-        $ai = ai_read_email($m['subject'], $text, array_map(fn($a) => ['filename' => $a['filename'], 'mime' => $a['mime']], $m['attachments']), $thumbs, $tagKind ?? '');
-    }
-
+    // The tag decides where it goes. Without a tag, simple rules make a best guess and the item waits for approval.
     $kind = $tagKind;
     $sure = true;
     if (!$kind) {
-        if ($ai && $ai['kind'] !== 'other') {
-            $kind = $ai['kind'];
-            $sure = (bool)$ai['confident'];
-        } elseif (!$ai && $media['image'] && trim($body) === '') {
-            $kind = 'photo'; // photos with no words: put them in the gallery
-            $sure = false;
-        } else {
-            return ingest_log($log, $ai ? 'ignored' : 'review', $ai ? ('Not a website update: ' . $ai['reason']) : 'No tag, and Claude is not switched on. Add a tag such as "Sermon:" to the subject.');
+        $kind = guess_kind($m['subject'] . "\n" . $body, $fields, $media);
+        $sure = false;
+        if (!$kind) {
+            $log['note'] = 'No tag in the subject, and the email did not look like a sermon, photos, an event or an announcement.';
+            send_mail($from, 'Re: ' . $m['subject'], "Thank you for your email. It was not added to the website because the subject did not start with a tag.\n\n"
+                . "Please send it again with one of these at the start of the subject:\n  Sermon:\n  Photo: (then a category, e.g. Photo: Outreach)\n  Event:\n  Announcement:\n  Times:\n  Testimony:\n\nPotter's House website");
+            return ingest_log($log, 'ignored', $log['note']);
         }
+        $notes[] = "No tag in the subject, so this was treated as: $kind. Please check before approving.";
     }
-    if ($ai && $tagKind && $ai['kind'] !== $tagKind && $ai['kind'] !== 'other') $sure = $sure && (bool)$ai['confident'];
 
-    $live = $sure && (setting('publish_mode') === 'auto' || (int)$sender['publish_direct'] === 1);
-    if ($kind === 'testimony') $live = (int)$sender['publish_direct'] === 1 && $sure;
-    $status = $live ? 'live' : 'review';
+    $status = 'review'; // an admin always approves before anything appears on the site
 
-    $built = build_items($kind, $rest, $fields, $body, $media, $ai ?? [], $m['from_name']);
+    $built = build_items($kind, $rest, $fields, $body, $media, $m['from_name']);
     if (!$built['items'] && $kind !== 'times') {
         return ingest_log(array_merge($log, ['target_type' => $kind]), 'review', $built['problem'] ?: 'Nothing to publish was found in the email.');
     }
-    if ($built['problem']) {
-        $status = 'review';
-        $notes[] = $built['problem'];
-    }
+    if ($built['problem']) $notes[] = $built['problem'];
 
     $ids = [];
     if ($kind === 'times') {
         $log['payload'] = json_encode($built['times']);
-        if ($status === 'live') apply_times($built['times']);
     } else {
         $table = KIND_TABLE[$kind];
         foreach ($built['items'] as $item) {
@@ -154,11 +135,11 @@ function ingest_message(string $raw): array
 
     $log['target_type'] = $kind;
     $log['target_ids'] = implode(',', $ids);
-    $log['approve_token'] = $status === 'review' ? random_token(20) : '';
-    $res = ingest_log($log, $status === 'live' ? 'published' : 'review', implode("\n", array_filter([$ai ? ('Claude: ' . $ai['reason']) : '', ...$notes])));
+    $log['approve_token'] = random_token(20);
+    $res = ingest_log($log, 'review', implode("\n", $notes));
 
     ingest_reply($from, $m['subject'], $kind, $status, $built['label'], $notes);
-    if ($status === 'review') ingest_ask_approval($log, $kind, $built['label']);
+    ingest_ask_approval($log, $kind, $built['label']);
     return $res;
 }
 
@@ -215,18 +196,45 @@ function parse_date(string $v): ?string
     return $t ? date('Y-m-d', $t) : null;
 }
 
+const VIDEO_LINK_RE = '#https?://(?:www\.|m\.|vm\.|vt\.)?(?:youtube\.com|youtu\.be|tiktok\.com|facebook\.com|fb\.watch)/[^\s<>"\']+#i';
+
 function first_link(string $text): string
 {
-    return preg_match('#https?://(?:www\.|m\.)?(?:youtube\.com|youtu\.be|facebook\.com|fb\.watch)/\S+#i', $text, $mm) ? rtrim($mm[0], '.,)') : '';
+    return video_links($text)[0] ?? '';
 }
 
-function pick(array $ai, string $key, string $fallback): string
+function video_links(string $text): array
 {
-    $v = trim((string)($ai[$key] ?? ''));
-    return $v !== '' ? $v : $fallback;
+    preg_match_all(VIDEO_LINK_RE, $text, $mm);
+    return array_values(array_unique(array_map(fn($l) => rtrim($l, '.,)'), $mm[0])));
 }
 
-function build_items(string $kind, string $rest, array $f, string $body, array $media, array $ai, string $fromName): array
+// Best guess for an email without a tag. Plain rules, no AI: the result always waits for approval.
+function guess_kind(string $text, array $f, array $media): ?string
+{
+    $t = strtolower($text);
+    $has = fn(string $re) => (bool)preg_match($re, $t);
+    if ($has('/\btestimon(y|ies)\b/')) return 'testimony';
+    if ($media['audio'] || isset($f['preacher']) || isset($f['scripture']) || $has('/\b(sermon|preached|preaching|preacher)\b/')) return 'sermon';
+    if ($media['video'] || first_link($text) !== '') return 'video';
+    if (isset($f['prayer_day']) || isset($f['prayer_time']) || isset($f['sunday']) || isset($f['bible_day']) || isset($f['bible_time'])
+        || $has('/\b(service|prayer|bible study) (time|times|day) (is |are |has |have )?(changed|moves?|now)\b/')) return 'times';
+    if (isset($f['date']) || isset($f['venue']) || $has('/\b(crusade|conference|seminar|convention|retreat|youth day|overnight|kesha|outreach on|join us on)\b/')) return 'event';
+    if ($media['image']) return 'photo';
+    if ($has('/\b(announcement|notice|cancelled|canceled|postponed|reminder|please note)\b/')) return 'announcement';
+    return null;
+}
+
+// Turns a meaningful file name (e.g. "baptism-at-the-river.jpg") into a caption; camera names like IMG_1234 give none.
+function caption_from_file(string $url): string
+{
+    $n = pathinfo($url, PATHINFO_FILENAME);
+    $n = preg_replace('/-[a-f0-9]{6}$/', '', $n);
+    if (preg_match('/^(img|dsc|image|photo|pxl|whatsapp)[-_ ]?\d*/i', $n) || preg_match('/^[\d-]+$/', $n)) return '';
+    return ucfirst(trim(str_replace('-', ' ', $n)));
+}
+
+function build_items(string $kind, string $rest, array $f, string $body, array $media, string $fromName): array
 {
     $items = [];
     $problem = '';
@@ -236,13 +244,13 @@ function build_items(string $kind, string $rest, array $f, string $body, array $
 
     switch ($kind) {
         case 'sermon':
-            $title = pick($ai, 'title', $f['title'] ?? $rest);
+            $title = $f['title'] ?? $rest;
             $item = [
                 'title' => $title ?: 'Sunday sermon',
-                'preacher' => pick($ai, 'preacher', $f['preacher'] ?? ''),
-                'scripture' => pick($ai, 'scripture', $f['scripture'] ?? ''),
-                'preached_on' => parse_date(pick($ai, 'date', $f['date'] ?? '')) ?? date('Y-m-d'),
-                'summary' => pick($ai, 'summary', $body),
+                'preacher' => $f['preacher'] ?? '',
+                'scripture' => $f['scripture'] ?? '',
+                'preached_on' => parse_date($f['date'] ?? '') ?? date('Y-m-d'),
+                'summary' => $body,
                 'media_url' => $f['link'] ?? first_link($body),
                 'audio' => $media['audio'][0]['url'] ?? '',
                 'video' => $media['video'][0]['url'] ?? '',
@@ -255,11 +263,11 @@ function build_items(string $kind, string $rest, array $f, string $body, array $
 
         case 'photo':
             [$cat, $caption] = split_category($rest, $f['category'] ?? '');
-            $cat = $cat ?: (in_array($ai['category'] ?? '', gallery_categories(), true) ? $ai['category'] : 'Fellowship');
+            $cat = $cat ?: 'Fellowship';
             foreach ($media['image'] as $i => $img) {
                 $items[] = [
                     'file' => $img['url'],
-                    'caption' => trim((string)($ai['captions'][$i] ?? '')) ?: ($f['caption'] ?? $caption),
+                    'caption' => ($f['caption'] ?? $caption) ?: caption_from_file($img['url']),
                     'category' => $cat,
                     'taken_on' => parse_date($f['date'] ?? '') ?? date('Y-m-d'),
                 ];
@@ -269,16 +277,16 @@ function build_items(string $kind, string $rest, array $f, string $body, array $
             break;
 
         case 'event':
-            $date = parse_date(pick($ai, 'date', $f['date'] ?? ''));
-            $time = pick($ai, 'time', $f['time'] ?? '');
+            $date = parse_date($f['date'] ?? '');
+            $time = $f['time'] ?? '';
             $t = $time !== '' ? strtotime($time) : false;
-            $title = pick($ai, 'title', $f['title'] ?? $rest);
+            $title = $f['title'] ?? $rest;
             $items[] = [
                 'title' => $title ?: 'Church event',
-                'kind' => pick($ai, 'event_kind', $f['kind'] ?? ''),
+                'kind' => $f['kind'] ?? '',
                 'starts_at' => ($date ?? date('Y-m-d', strtotime('+7 days'))) . ' ' . ($t ? date('H:i:00', $t) : '09:00:00'),
-                'venue' => pick($ai, 'venue', $f['venue'] ?? 'PHOMI, Burweta'),
-                'details' => pick($ai, 'summary', $body),
+                'venue' => $f['venue'] ?? 'PHOMI, Burweta',
+                'details' => $body,
                 'cover' => $firstImg,
             ];
             if (!$date) $problem = 'No date was found for the event. Check it before it goes live.';
@@ -286,10 +294,10 @@ function build_items(string $kind, string $rest, array $f, string $body, array $
             break;
 
         case 'announcement':
-            $title = pick($ai, 'title', $f['title'] ?? $rest);
+            $title = $f['title'] ?? $rest;
             $items[] = [
                 'title' => $title ?: mb_substr($body, 0, 80),
-                'body' => pick($ai, 'summary', $body),
+                'body' => $body,
                 'link' => $f['link'] ?? '',
                 'starts_on' => date('Y-m-d'),
                 'ends_on' => parse_date($f['until'] ?? '') ?? date('Y-m-d', strtotime('+14 days')),
@@ -297,20 +305,38 @@ function build_items(string $kind, string $rest, array $f, string $body, array $
             $label = $items[0]['title'];
             break;
 
+        case 'video':
+            [$cat, $title] = split_video_category($rest, $f['category'] ?? '');
+            $title = ($f['title'] ?? $title) ?: 'Church video';
+            $date = parse_date($f['date'] ?? '') ?? date('Y-m-d');
+            $links = isset($f['link']) ? [$f['link']] : video_links($body);
+            $all = count($links) + count($media['video']);
+            $n = 0;
+            foreach ($links as $l) {
+                $n++;
+                $items[] = ['title' => $all > 1 ? "$title ($n)" : $title, 'link' => $l, 'cover' => $firstImg, 'category' => $cat, 'posted_on' => $date];
+            }
+            foreach ($media['video'] as $v) {
+                $n++;
+                $items[] = ['title' => $all > 1 ? "$title ($n)" : $title, 'video' => $v['url'], 'cover' => $firstImg, 'category' => $cat, 'posted_on' => $date];
+            }
+            if (!$items) $problem = 'No YouTube, TikTok or Facebook link and no video file were found in the email.';
+            $label = count($items) === 1 ? $title : count($items) . ' videos';
+            break;
+
         case 'testimony':
             $items[] = [
                 'name' => $fromName,
-                'title' => pick($ai, 'title', $rest),
-                'body' => pick($ai, 'summary', $body),
+                'title' => $rest,
+                'body' => $body,
             ];
             $label = $items[0]['title'] ?: 'Testimony';
             break;
 
         case 'times':
-            $at = $ai['times'] ?? [];
             $map = ['sunday' => 'times_sunday', 'prayer_day' => 'times_prayer_day', 'prayer_time' => 'times_prayer_time', 'bible_day' => 'times_bible_day', 'bible_time' => 'times_bible_time'];
             foreach ($map as $k => $setting) {
-                $v = trim((string)($at[$k] ?? $f[$k] ?? ''));
+                $v = trim((string)($f[$k] ?? ''));
                 if ($v !== '') $times[$setting] = mb_substr($v, 0, 80);
             }
             if (!$times) $problem = 'No new times were found. Write lines like "Prayer day: Wednesday" and "Prayer time: 6:30pm – 8:30pm".';
@@ -329,15 +355,24 @@ function split_category(string $rest, string $explicit): array
     return ['', $rest];
 }
 
+function split_video_category(string $rest, string $explicit): array
+{
+    foreach (video_categories() as $c) {
+        if (strcasecmp(trim($explicit), $c) === 0) return [$c, $rest];
+        if (preg_match('/^' . preg_quote($c, '/') . '\b\s*[,:\-–]\s*(.*)$/i', $rest, $mm)) return [$c, trim($mm[1])];
+    }
+    return ['Worship', $rest];
+}
+
 function apply_times(array $times): void
 {
-    foreach ($times as $k => $v) setting_set($k, (string)$v);
+    settings_save($times, 'Changed service times');
 }
 
 function ingest_reply(string $to, string $subject, string $kind, string $status, string $label, array $notes): void
 {
     $page = site_url(KIND_PAGE[$kind] ?? '/');
-    $what = ['sermon' => 'sermon', 'photo' => 'photos', 'event' => 'event', 'announcement' => 'announcement', 'testimony' => 'testimony', 'times' => 'new service times'][$kind] ?? 'update';
+    $what = ['sermon' => 'sermon', 'photo' => 'photos', 'event' => 'event', 'announcement' => 'announcement', 'testimony' => 'testimony', 'video' => 'video', 'times' => 'new service times'][$kind] ?? 'update';
     $text = $status === 'live'
         ? "Thank you. Your $what ($label) is now on the website:\n$page\n"
         : "Thank you. Your $what ($label) has been received and is waiting for approval. You will see it on the website once it is approved.\n";
@@ -371,7 +406,7 @@ function inbox_apply(array $it, bool $approve): array
     } elseif (isset(KIND_TABLE[$type])) {
         $table = KIND_TABLE[$type];
         foreach (array_filter(explode(',', (string)$it['target_ids'])) as $id) {
-            q("UPDATE $table SET status = ? WHERE id = ?", [$approve ? 'live' : 'hidden', (int)$id]);
+            if (row("SELECT id FROM $table WHERE id = ?", [(int)$id])) resource_update($table, (int)$id, ['status' => $approve ? 'live' : 'hidden']);
         }
     }
     q('UPDATE inbox SET status = ?, approve_token = ? WHERE id = ?', [$approve ? 'published' : 'rejected', '', $it['id']]);
