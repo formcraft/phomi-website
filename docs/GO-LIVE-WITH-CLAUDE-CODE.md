@@ -2,7 +2,16 @@
 
 First try the site on your computer with [LOCAL-PREVIEW.md](LOCAL-PREVIEW.md). When you are happy with it, open Claude Code in the same `phomi-website` folder and paste everything below the line. Paste new information into the same session as you get it, for example "Here is the database name and FTP host" or "Yo! sandbox account is ready". Claude Code will take each item from there.
 
+**Getting the latest code first.** All the work is on the branch `admin-backend` (pull request #1), not on `main` yet. If you already have the folder, Claude Code will update it in step 0 below. If not, start Claude Code in an empty folder, or on claude.ai/code with the `formcraft/phomi-website` repository, and it will fetch it.
+
 ---
+
+## Step 0: get the latest code (do this first, every new session)
+
+1. If this folder has no `phomi-website` repository yet, clone `https://github.com/formcraft/phomi-website.git` and go into it.
+2. Run `git fetch origin` then `git checkout admin-backend` then `git pull origin admin-backend`. Do not work on `main`.
+3. Run `npm ci`, then the checks: `python3 api/tests/test_api.py`, `npm run build`, `node scripts/test-site.mjs` and `node scripts/test-phone.mjs`. Report to the owner in one line whether they pass. If one fails, fix it on the branch before anything else.
+4. Read `docs/LAUNCH-PROGRESS.md` if it exists, and carry on from the first step that is not done.
 
 You are finishing and launching the website for **Potter's House Outreach Ministries International (PHOMI)**, a church in Burweta, Butebo District, Uganda. The live address is **https://pottershouseoutreachministriesinternational.com** and stays the same. It is hosted on **Hostinger** (shared hosting: Apache/LiteSpeed, PHP, MySQL, cron, Hostinger Email). The site currently on that domain is an old WordPress site. This repository replaces it.
 
