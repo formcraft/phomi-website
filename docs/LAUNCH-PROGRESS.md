@@ -4,7 +4,8 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 
 ## Decisions
 
-- 2026-11-08: The owner wants the old WordPress site **fully removed**. Instead of keeping `old-wordpress` for a month (Phase 3 and 7), delete the WordPress files and the WordPress database once the new site is live and checked. Before that: one full backup downloaded to the owner's computer, and the GiveWP donation records exported if the church needs them. Old addresses keep working through the 301 redirects in `public/.htaccess`.
+- 2026-11-08: The owner wants the old WordPress site **fully removed**. Instead of keeping `old-wordpress` for a month (Phase 3 and 7), delete the WordPress files and the WordPress database on launch day, once the new site is live and checked. Old addresses keep working through the 301 redirects in `public/.htaccess`.
+- 2026-11-08: The owner chose **no backup download** of WordPress (and so no export of the GiveWP donation records). They were told the deletion then cannot be undone, except from any automatic backup Hostinger itself still holds.
 
 ## Found so far
 
@@ -18,10 +19,10 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 | 2026-11-08 | 0 | Latest code, checks pass | done | Two Windows-only test fixes made on the branch (API test folder link and server log; two site checks waited too little) |
 | 2026-11-08 | 0 | Owner has tried the site locally, nothing left to change | done | Owner said "go live", no changes |
 | 2026-11-08 | 0 | hPanel and GitHub sign-in, Hostinger plan name | done | Premium Web Hosting (PHP, MySQL, cron, email; no SSH, not needed). GitHub sign-in checked in Phase 3 |
-| 2026-11-08 | 1 | WordPress backup downloaded and opened | waiting | |
-| | 1 | GiveWP donation records exported (if needed) | to do | |
-| | 1 | Redirects for every old address | to do | The 8 addresses above |
-| | 1 | Domain mailboxes noted | to do | |
+| 2026-11-08 | 1 | WordPress backup downloaded and opened | skipped | Owner's choice, after being told it cannot be undone |
+| 2026-11-08 | 1 | GiveWP donation records exported (if needed) | skipped | Goes with the backup decision |
+| 2026-11-08 | 1 | Redirects for every old address | done | The 8 addresses above now go to /about, /contact or /give. test-phone checks every old sitemap page |
+| 2026-11-08 | 1 | Domain mailboxes noted | waiting | |
 | | 2 | PHP settings | to do | |
 | | 2 | Database and user | to do | |
 | | 2 | phomi-config.php on the server | to do | |

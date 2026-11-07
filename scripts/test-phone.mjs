@@ -206,6 +206,18 @@ try {
     check('robots.txt points to the sitemap and hides the admin', /Sitemap: https:\/\/.+\/sitemap\.xml/.test(robots) && /Disallow: \/admin/.test(robots), robots);
     const hta = readFileSync(join(ROOT, 'public', '.htaccess'), 'utf8');
     check('old WordPress addresses redirect to the new pages', /\^\(about-us/.test(hta) && /\^\(prayer-requests\?/.test(hta) && /R=301/.test(hta));
+    // Every page in the old WordPress sitemap (read 2026-11-08) must end on a real new page:
+    // either a page of the new site, or a 301 rule in .htaccess that points to one.
+    const OLD_WP = ['/', '/about-2/', '/contact-2/', '/donation-confirmation/', '/donation-confirmation-2/', '/donation-failed/',
+      '/donation-failed-2/', '/donor-dashboard/', '/donor-dashboard-2/', '/events/', '/give/', '/ministries/', '/prayer-requests/', '/sermons/'];
+    const rules = [...hta.matchAll(/^RewriteRule \^(\S+)\$ (\/\S*) \[L,R=301\]$/gm)].map((m) => [new RegExp(`^${m[1]}$`), m[2]]);
+    const pages = new Set(PAGES.map((p) => p.split('?')[0]));
+    const lost = OLD_WP.filter((old) => {
+      const path = old.replace(/(.)\/$/, '$1'); // the trailing-slash rule runs first
+      const to = pages.has(path) ? path : rules.find(([re]) => re.test(path.slice(1)))?.[1];
+      return !to || !pages.has(to);
+    });
+    check('every old WordPress page lands on a new page', lost.length === 0, lost.join(', '));
   }
 
   // ---- Security basics ----

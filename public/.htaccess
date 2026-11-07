@@ -15,11 +15,13 @@ RewriteRule ^(.+)/$ /$1 [L,R=301]
 RewriteRule ^(api|uploads)(/|$) - [L]
 
 # Addresses from the old WordPress site, so links and Google results keep working
-RewriteRule ^(about-us|who-we-are)$ /about [L,R=301]
+RewriteRule ^(about-us|about-2|who-we-are)$ /about [L,R=301]
 RewriteRule ^(worship|outreach|our-ministries|bible-college|bible-study)$ /ministries [L,R=301]
 RewriteRule ^(prayer-requests?|prayer-request-form)$ /prayer [L,R=301]
-RewriteRule ^(contact-us|location)$ /contact [L,R=301]
+RewriteRule ^(contact-us|contact-2|location)$ /contact [L,R=301]
 RewriteRule ^(donate|giving|donations|support-us)$ /give [L,R=301]
+# GiveWP's donation pages from the old site
+RewriteRule ^(donation-confirmation|donation-failed|donor-dashboard)(-2)?$ /give [L,R=301]
 RewriteRule ^(sermon|messages|media)$ /sermons [L,R=301]
 RewriteRule ^(event|upcoming-events)$ /events [L,R=301]
 RewriteRule ^(photos|photo-gallery)$ /gallery [L,R=301]
