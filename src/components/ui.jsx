@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { useOverlay } from './Overlay.jsx';
 import { CHURCH, CLIPS, PHOTOS, TIMES, img } from '../data.js';
+import { useLive } from '../live.jsx';
 
 // Marks content the church still needs to supply. Shows as a gold highlight.
 export function Tbc({ children }) {
@@ -58,10 +59,12 @@ export function SectionHead({ title, gold, lead, children }) {
 }
 
 export function PrayerWhen() {
+  useLive();
   return TIMES.prayerDay ? <>{TIMES.prayerDay}</> : <Tbc>Day to confirm</Tbc>;
 }
 
 export function GatherCards() {
+  useLive();
   return (
     <div className="gather">
       <div className="gcard">

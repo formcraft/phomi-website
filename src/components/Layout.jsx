@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import Seal from './Seal.jsx';
-import { CHURCH, NAV } from '../data.js';
+import { CHURCH, NAV, TIMES } from '../data.js';
+import { useLive } from '../live.jsx';
 
 function ScrollManager() {
   const { pathname, hash } = useLocation();
@@ -66,6 +67,7 @@ function Header() {
 }
 
 function Footer() {
+  useLive();
   return (
     <footer className="site">
       <div className="cols">
@@ -104,7 +106,7 @@ function Footer() {
           <span>{CHURCH.address[0]}<br />{CHURCH.address[1]}</span>
           <span>{CHURCH.phones.map((p) => <span key={p} style={{ display: 'block' }}>{p}</span>)}</span>
           <span className="email">{CHURCH.email}</span>
-          <span>Sundays 8:30am – 12:00pm</span>
+          <span>{TIMES.sunday.replace(/^Every /, '')}</span>
         </div>
       </div>
       <div className="base">
@@ -117,11 +119,36 @@ function Footer() {
   );
 }
 
+// The newest announcement from the admin page or the update mailbox, shown above every page.
+function NewsBar() {
+  const { announcements } = useLive();
+  const [hidden, setHidden] = useState(() => {
+    try { return sessionStorage.getItem('phomi-news-hide') || ''; } catch { return ''; }
+  });
+  const a = announcements[0];
+  if (!a || hidden === String(a.id)) return null;
+  const close = () => {
+    setHidden(String(a.id));
+    try { sessionStorage.setItem('phomi-news-hide', String(a.id)); } catch { /* ignore */ }
+  };
+  return (
+    <div className="newsbar band" role="region" aria-label="Announcement">
+      <div className="in">
+        <Icon name="bell" size={18} />
+        <p><strong>{a.title}</strong>{a.body ? <span> {a.body}</span> : null}</p>
+        {a.link && <a href={a.link} target="_blank" rel="noopener noreferrer">More</a>}
+        <button type="button" onClick={close} aria-label="Hide announcement"><Icon name="close" size={16} /></button>
+      </div>
+    </div>
+  );
+}
+
 export default function Layout() {
   return (
     <>
       <a className="skip" href="#main">Skip to content</a>
       <ScrollManager />
+      <NewsBar />
       <Header />
       <main id="main">
         <Outlet />

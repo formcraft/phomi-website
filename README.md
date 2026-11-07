@@ -1,63 +1,73 @@
-# Potter's House Outreach Ministries International — website
+# Potter's House Outreach Ministries International: website
 
 The website for PHOMI (Church & Bible Study), Burweta, Butebo District, Uganda.
-Built with **React + JavaScript** using [Vite](https://vite.dev), hosted on **Hostinger**.
+It lives at **https://pottershouseoutreachministriesinternational.com** and is hosted on **Hostinger**.
+
+- **Website:** React + JavaScript with [Vite](https://vite.dev) (`src/`)
+- **Backend:** plain PHP 8.1+ and MySQL, which every Hostinger plan runs (`api/`)
+- **Admin page:** `/admin`, for sermons, gallery, events, announcements, testimonies, giving, prayer requests and settings
+- **Automatic updates:** approved people email the church update address with a tag such as `Sermon:` or `Photo: Outreach`, and the site publishes it. Claude reads untagged emails and writes captions.
+- **Giving:** the giver types their MTN or Airtel number and gets the Mobile Money PIN prompt on their phone (Yo! Payments or Flutterwave). Until a payment account is live, the page falls back to the dial code.
+
+**Launching?** Start with [docs/INFORMATION-NEEDED.md](docs/INFORMATION-NEEDED.md), then follow [docs/SETUP.md](docs/SETUP.md).
+To have Claude Code finish the launch, use [docs/CLAUDE-CODE-PROMPT.md](docs/CLAUDE-CODE-PROMPT.md).
 
 ## Run it on your computer
 
-You need [Node.js](https://nodejs.org) 20 or newer.
+You need [Node.js](https://nodejs.org) 20+, PHP 8.1+ (with pdo_sqlite, gd, curl, mbstring, fileinfo) and [Composer](https://getcomposer.org).
 
 ```bash
 npm install
-npm run dev       # opens the site at http://localhost:5173 and reloads as you edit
-npm run build     # makes the finished site in the dist/ folder
-npm run preview   # serves dist/ so you can check the build
+npm run dev                         # the website at http://localhost:5173 (built-in content only)
+(cd api && composer install)        # PHP libraries (Anthropic SDK for the email reader)
+npm run build                       # the finished site, backend included, in dist/
+npm run test:api                    # backend tests: SQLite, mock payments, fake mailbox
+npm run test:site                   # browser tests of the built site, desktop and phone (needs Playwright)
 ```
+
+## How the pieces fit
+
+```
+Visitor's browser ──► index.html + React (dist/)
+                         │  loads /api/content (sermons, photos, events, announcements, times)
+                         │  posts /api/give, /api/prayer, /api/contact
+                         ▼
+                    api/index.php ──► MySQL
+                         ▲      └──► Yo! Payments / Flutterwave  ──►  PIN prompt on the giver's phone
+Cron every 5 min ──► api/cron/inbox.php ──► church update mailbox (IMAP) ──► Claude (untagged mail)
+```
+
+If the backend can't be reached, the site still works with the built-in content in `src/data.js`.
 
 ## Where to change things
 
 | What | Where |
 | --- | --- |
-| Phone numbers, WhatsApp, email, Facebook, address | `src/data.js` → `CHURCH` |
-| Prayer Time day, Bible study day and time | `src/data.js` → `TIMES` |
-| Mobile Money numbers and registered names | `src/data.js` → `MOMO` |
-| Bank details | `src/data.js` → `BANK` |
-| Gift amount buttons | `src/data.js` → `AMOUNTS` |
-| Upcoming events | `src/data.js` → `EVENTS` |
-| Photos (gallery and captions) | `public/img/` + `src/data.js` → `PHOTOS` |
-| Videos | `public/video/` + `src/data.js` → `CLIPS` |
+| Sermons, gallery photos, events, announcements, testimonies | **Admin page**, or email the update address |
+| Service times, phone numbers, WhatsApp, Mobile Money and bank details | **Admin → Settings** (overrides `src/data.js`) |
+| Approved senders, alert email, publish straight away or after approval | **Admin → Approved senders / Settings** |
+| Built-in photos and videos | `public/img/`, `public/video/` + `src/data.js` → `PHOTOS`, `CLIPS` |
 | Page text | `src/pages/*.jsx` |
-| Colours, fonts, layout | `src/styles.css` |
+| Colours, fonts, layout | `src/styles.css` (admin: `src/admin/admin.css`) |
 | Logo (Refined Seal) | `src/components/Seal.jsx`, pot artwork in `public/img/pot.png` |
+| Server settings and keys | `phomi-config.php` on the server (template: `api/config.sample.php`); never in GitHub |
+| Database tables | `api/schema.sql` (re-run `/api/install.php?token=…` after adding tables) |
 
-Text the church still needs to supply shows on the site with a gold highlight
-(the `<Tbc>` component). Search for `Tbc` to find every one.
+Text the church still needs to supply shows with a gold highlight (the `<Tbc>` component). Search for `Tbc` to find each one.
 
-## Giving
+## Emailed updates
 
-The Give page lets people type any amount or pick 1,000 – 50,000 UGX. On a phone,
-**Give now** opens the MTN MoMo (`*165#`) or Airtel Money (`*185#`) menu in the dialer.
-Once `MOMO.mtn.num` / `MOMO.airtel.num` are filled in, the church number and amount are
-pre-filled so the giver only enters their PIN. Test one small gift on each network after
-setting the numbers, since networks change their menu paths from time to time.
+| Subject starts with | Goes to |
+| --- | --- |
+| `Sermon: Title` | Sermons. Attach audio or video, or paste a YouTube link. Lines like `Preacher:`, `Scripture:`, `Date:` fill the details |
+| `Photo: Outreach, caption` | Gallery, under the category named first |
+| `Event: Name` | Events. Use `Date:`, `Time:`, `Venue:` lines |
+| `Announcement: Headline` | Banner on every page. `Until:` sets the end date |
+| `Times: …` | Weekly times. `Prayer day:`, `Prayer time:`, `Bible study day:`… |
+| `Testimony: Headline` | Testimonies (always checked first) |
 
-For a payment prompt that pops up on the giver's phone automatically (no dialing), connect
-a payment provider such as Flutterwave or the MTN MoMo Collections API. That needs a small
-server-side script (Hostinger supports PHP or Node.js) to keep the API keys secret.
+Only senders on the approved list are accepted. Each sender gets a reply with the link. Items waiting for approval send the office a one-tap approve link.
 
-## Deploy to Hostinger
+## Deploy
 
-**Option A — automatic (recommended).** Every push to `main` builds the site with GitHub
-Actions and uploads `dist/` to `public_html`. One-time setup:
-
-1. In Hostinger hPanel go to **Files → FTP Accounts** and note the FTP host, username and password.
-2. In this GitHub repo go to **Settings → Secrets and variables → Actions** and add
-   `FTP_SERVER`, `FTP_USERNAME` and `FTP_PASSWORD`.
-3. Push to `main` (or run the workflow from the **Actions** tab).
-
-**Option B — by hand.** Run `npm run build`, then in hPanel open **File Manager →
-public_html**, upload everything inside `dist/` (including the hidden `.htaccess`), and
-extract if you uploaded a zip.
-
-`public/.htaccess` is copied into the build. It turns on HTTPS, makes page links such as
-`/about` and `/give` work when opened directly, and sets sensible caching.
+Every push to `main` runs `.github/workflows/deploy.yml`: PHP libraries, PHP lint, API tests, build, then an FTP upload of `dist/` to `public_html`. The upload needs the repository secrets `FTP_SERVER`, `FTP_USERNAME` and `FTP_PASSWORD`, and is skipped until they exist. Pull requests run the tests only. Full steps are in [docs/SETUP.md](docs/SETUP.md).

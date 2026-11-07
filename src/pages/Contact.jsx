@@ -2,8 +2,10 @@ import Icon from '../components/Icon.jsx';
 import { ContactForm } from '../components/MessageForm.jsx';
 import { Banner, CopyButton, MapCard, PrayerWhen, Tbc } from '../components/ui.jsx';
 import { CHURCH, TIMES } from '../data.js';
+import { useLive } from '../live.jsx';
 
 export default function Contact() {
+  useLive();
   return (
     <>
       <Banner photo="church-front" eyebrow="You are welcome here" title="Contact & Visit" crumb="Contact" />
@@ -38,7 +40,7 @@ export default function Contact() {
         <div className="wrap two">
           <div className="stack">
             <h2 className="h2" style={{ fontSize: 34 }}>Send us a Message</h2>
-            <ContactForm id="contact" button="Prepare message" />
+            <ContactForm id="contact" button="Send message" />
           </div>
           <div className="stack" style={{ gap: 20 }}>
             <MapCard />

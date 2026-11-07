@@ -80,7 +80,7 @@ export function OverlayProvider({ children }) {
           )}
           <figure>
             {it.type === 'video' ? (
-              <video key={it.name} controls autoPlay playsInline poster={img('v-' + it.name)}>
+              <video key={it.name} controls autoPlay playsInline poster={it.poster ?? img('v-' + it.name)}>
                 <source src={video(it.name)} type="video/mp4" />
               </video>
             ) : (

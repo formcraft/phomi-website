@@ -122,6 +122,9 @@ export const BUILD_STEPS = [
   ['church-tree', 'Today', 'A house of worship', 'A finished home for worship, prayer and Bible study.']
 ];
 
-export const img = (name) => `/img/${name}.jpg`;
-export const video = (name) => `/video/${name}.mp4`;
+// Built-in media live in /public/img and /public/video. Media added from the admin page or by email
+// are full paths under /uploads, and are used as they are.
+const isPath = (name) => /^(\/|https?:)/.test(name);
+export const img = (name) => (isPath(name) ? name : `/img/${name}.jpg`);
+export const video = (name) => (isPath(name) ? name : `/video/${name}.mp4`);
 export const fmt = (n) => Number(n).toLocaleString('en-US');

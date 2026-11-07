@@ -3,6 +3,7 @@ import { useOverlay } from '../components/Overlay.jsx';
 import { Banner, Photo, SectionHead, Tbc } from '../components/ui.jsx';
 import { CLIPS, TIMES } from '../data.js';
 import { PrayerWhen } from '../components/ui.jsx';
+import { useLive } from '../live.jsx';
 
 const TABS = [['worship', 'Worship'], ['outreach', 'Outreach'], ['bible-study', 'Bible Study']];
 
@@ -63,6 +64,7 @@ function Panel({ tab }) {
 }
 
 export default function Ministries() {
+  useLive();
   const [params, setParams] = useSearchParams();
   const tab = TABS.some(([id]) => id === params.get('tab')) ? params.get('tab') : 'worship';
   const care = [

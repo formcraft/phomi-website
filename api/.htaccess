@@ -1,0 +1,16 @@
+# PHOMI API on Hostinger
+Options -Indexes
+RewriteEngine On
+
+# Never serve the code, config, tests or libraries directly
+RewriteRule ^(lib|cron|tests|vendor)(/|$) - [F,L]
+RewriteRule ^(config\.php|config\.sample\.php|composer\.(json|lock)|schema\.sql)$ - [F,L]
+
+# install.php is a real file; everything else goes to the router
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [L,QSA]
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+</IfModule>

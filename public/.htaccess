@@ -5,6 +5,9 @@ RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# The PHP backend and uploaded media are real folders, never the page
+RewriteRule ^(api|uploads)(/|$) - [L]
+
 # Single-page app: send every page link (/about, /give …) to index.html
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

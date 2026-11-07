@@ -1,31 +1,48 @@
-name: Build and deploy to Hostinger
+name: Test, build and deploy to Hostinger
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     env:
       FTP_SERVER: ${{ secrets.FTP_SERVER }}
     steps:
       - uses: actions/checkout@v4
 
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: curl, gd, mbstring, fileinfo, openssl, pdo_mysql, pdo_sqlite
+          tools: composer:v2
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
+      - name: Install the PHP libraries (Claude reader)
+        working-directory: api
+        run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Check PHP syntax
+        run: find api -name '*.php' -not -path 'api/vendor/*' -print0 | xargs -0 -n1 php -l > /dev/null
+
+      - name: API tests (SQLite, mock payments, fake mailbox)
+        run: python3 api/tests/test_api.py
+
       - run: npm ci
       - run: npm run build
 
-      # Uploads the built site to public_html on Hostinger.
+      # Uploads the built site (dist/, including dist/api) to public_html on Hostinger.
       # Needs repository secrets FTP_SERVER, FTP_USERNAME and FTP_PASSWORD
-      # (Hostinger hPanel → Files → FTP Accounts). Skipped until they are set.
+      # (Hostinger hPanel → Files → FTP Accounts). Skipped until they are set, and never on pull requests.
       - name: Upload to Hostinger over FTP
-        if: env.FTP_SERVER != ''
+        if: env.FTP_SERVER != '' && github.event_name != 'pull_request'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ env.FTP_SERVER }}
@@ -33,3 +50,9 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
           server-dir: /public_html/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            uploads/**
+            api/config.php

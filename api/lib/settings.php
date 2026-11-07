@@ -1,0 +1,92 @@
+<?php
+declare(strict_types=1);
+
+// Settings the admin can change from the dashboard. Defaults match the current website.
+const SETTING_DEFAULTS = [
+    // Automatic updates by email
+    'inbox_address' => '',
+    'imap_host' => 'imap.hostinger.com',
+    'imap_port' => '993',
+    'imap_user' => '',
+    'imap_pass' => '', // stored encrypted
+    'publish_mode' => 'review', // 'auto' publishes straight away, 'review' waits for one-tap approval
+    'ai_enabled' => '1',
+    'notify_email' => '', // who gets alerts about prayer requests, messages and gifts
+
+    // Church details shown on the site (blank = use the built-in text)
+    'times_sunday' => '',
+    'times_prayer_day' => '',
+    'times_prayer_time' => '',
+    'times_bible_day' => '',
+    'times_bible_time' => '',
+    'whatsapp' => '',
+    'phones' => '',
+    'email' => '',
+    'momo_mtn_number' => '',
+    'momo_mtn_name' => '',
+    'momo_airtel_number' => '',
+    'momo_airtel_name' => '',
+    'bank_name' => '',
+    'bank_account' => '',
+    'bank_swift' => '',
+];
+
+// Settings that are safe to show to every visitor
+const PUBLIC_SETTINGS = [
+    'times_sunday', 'times_prayer_day', 'times_prayer_time', 'times_bible_day', 'times_bible_time',
+    'whatsapp', 'phones', 'email', 'momo_mtn_number', 'momo_mtn_name', 'momo_airtel_number', 'momo_airtel_name',
+    'bank_name', 'bank_account', 'bank_swift',
+];
+
+const SECRET_SETTINGS = ['imap_pass'];
+
+function settings_all(): array
+{
+    $out = SETTING_DEFAULTS;
+    foreach (rows('SELECT name, value FROM settings') as $r) {
+        if (array_key_exists($r['name'], $out)) $out[$r['name']] = (string)$r['value'];
+    }
+    return $out;
+}
+
+function setting(string $name): string
+{
+    $v = row('SELECT value FROM settings WHERE name = ?', [$name]);
+    $v = $v ? (string)$v['value'] : (SETTING_DEFAULTS[$name] ?? '');
+    if (in_array($name, SECRET_SETTINGS, true) && $v !== '') $v = decrypt_secret($v);
+    return $v;
+}
+
+function setting_set(string $name, string $value): void
+{
+    if (!array_key_exists($name, SETTING_DEFAULTS)) return;
+    if (in_array($name, SECRET_SETTINGS, true) && $value !== '') $value = encrypt_secret($value);
+    if (row('SELECT id FROM settings WHERE name = ?', [$name])) {
+        q('UPDATE settings SET value = ? WHERE name = ?', [$value, $name]);
+    } else {
+        insert('settings', ['name' => $name, 'value' => $value]);
+    }
+}
+
+function app_key(): string
+{
+    $k = (string)config('app_key');
+    if (strlen($k) < 16) throw new ApiError(500, 'app_key is missing from the server config.');
+    return hash('sha256', $k, true);
+}
+
+function encrypt_secret(string $plain): string
+{
+    $iv = random_bytes(12);
+    $tag = '';
+    $c = openssl_encrypt($plain, 'aes-256-gcm', app_key(), OPENSSL_RAW_DATA, $iv, $tag);
+    return 'v1:' . base64_encode($iv . $tag . $c);
+}
+
+function decrypt_secret(string $stored): string
+{
+    if (!str_starts_with($stored, 'v1:')) return $stored;
+    $raw = base64_decode(substr($stored, 3));
+    $p = openssl_decrypt(substr($raw, 28), 'aes-256-gcm', app_key(), OPENSSL_RAW_DATA, substr($raw, 0, 12), substr($raw, 12, 16));
+    return $p === false ? '' : $p;
+}

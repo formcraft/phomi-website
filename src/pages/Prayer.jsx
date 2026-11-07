@@ -1,8 +1,10 @@
 import { PrayerForm } from '../components/MessageForm.jsx';
 import { Banner, Photo, PrayerWhen } from '../components/ui.jsx';
 import { CHURCH, TIMES } from '../data.js';
+import { useLive } from '../live.jsx';
 
 export default function Prayer() {
+  useLive();
   return (
     <>
       <Banner photo="kneeling-prayer" eyebrow="We will pray with you" title="Prayer Requests">

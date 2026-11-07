@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "vite build && node scripts/copy-api.mjs",
+    "preview": "vite preview",
+    "test:api": "python3 api/tests/test_api.py",
+    "test:site": "node scripts/test-site.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

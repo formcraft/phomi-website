@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Link, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import { OverlayProvider } from './components/Overlay.jsx';
@@ -13,12 +13,14 @@ import Give from './pages/Give.jsx';
 import Contact from './pages/Contact.jsx';
 import { NAV } from './data.js';
 
+const Admin = lazy(() => import('./admin/Admin.jsx'));
+
 const SITE = "Potter's House Outreach Ministries International";
 
 function Title() {
   const { pathname } = useLocation();
   useEffect(() => {
-    const page = [...NAV, ['/give', 'Give']].find(([to]) => to === pathname);
+    const page = [...NAV, ['/give', 'Give'], ['/admin', 'Admin']].find(([to]) => pathname === to || (to === '/admin' && pathname.startsWith('/admin')));
     document.title = !page || page[0] === '/' ? `${SITE} | PHOMI` : `${page[1]} | ${SITE}`;
   }, [pathname]);
   return null;
@@ -41,6 +43,7 @@ export default function App() {
     <OverlayProvider>
       <Title />
       <Routes>
+        <Route path="admin/*" element={<Suspense fallback={<p style={{ padding: 32 }}>Loading…</p>}><Admin /></Suspense>} />
         <Route element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="about" element={<About />} />

@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
+import { api } from '../api.js';
+import { useLive } from '../live.jsx';
 import { useOverlay } from '../components/Overlay.jsx';
 import { Banner, CopyButton, Quote, Tbc } from '../components/ui.jsx';
 import { AMOUNTS, BANK, CHURCH, FUNDS, MOMO, fmt } from '../data.js';
@@ -8,6 +11,118 @@ const METHODS = [['mtn', 'MTN MoMo'], ['airtel', 'Airtel Money'], ['bank', 'Bank
 
 const localNumber = (num) => num.replace(/\D/g, '').replace(/^256/, '0');
 const dialCode = (m, n) => (MOMO[m].num ? MOMO[m].path(localNumber(MOMO[m].num)) + n + '#' : MOMO[m].menu);
+
+// 0772 123456 → MTN, 0752 123456 → Airtel
+function networkOf(phone) {
+  const d = phone.replace(/\D/g, '').replace(/^256/, '0').replace(/^7/, '07');
+  if (/^07[6-9]/.test(d)) return 'mtn';
+  if (/^07[045]/.test(d)) return 'airtel';
+  return null;
+}
+const phoneOk = (phone) => /^0?7\d{8}$/.test(phone.replace(/\D/g, '').replace(/^256/, ''));
+
+// Sends the PIN prompt to the giver's phone and waits for the network to confirm.
+function PushPay({ n, err, method, setMethod, fund, fundName, amt, setTouched }) {
+  const [phone, setPhone] = useState('');
+  const [name, setName] = useState('');
+  const [stage, setStage] = useState('form'); // form | sending | waiting | done | failed
+  const [msg, setMsg] = useState('');
+  const [gift, setGift] = useState(null);
+  const [params, setParams] = useSearchParams();
+  const timer = useRef();
+  const momo = MOMO[method];
+
+  const poll = (ref, started = Date.now()) => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(async () => {
+      try {
+        const g = await api('/give/' + encodeURIComponent(ref));
+        if (g.status === 'successful') { setGift(g); setStage('done'); return; }
+        if (g.status === 'failed') { setMsg(g.message || 'The payment did not go through.'); setStage('failed'); return; }
+      } catch { /* keep waiting through a dropped connection */ }
+      if (Date.now() - started > 4 * 60 * 1000) {
+        setMsg('We did not hear back from the network. If money left your account, send us the transaction ID on WhatsApp.');
+        setStage('failed');
+        return;
+      }
+      poll(ref, started);
+    }, 4000);
+  };
+
+  useEffect(() => {
+    const ref = params.get('ref');
+    if (ref) { setStage('waiting'); poll(ref); }
+    return () => clearTimeout(timer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onPhone = (e) => {
+    const v = e.target.value.replace(/[^\d+ ]/g, '').slice(0, 16);
+    setPhone(v);
+    const net = networkOf(v);
+    if (net && net !== method) setMethod(net);
+  };
+
+  const start = async () => {
+    setTouched(true);
+    if (err) { document.getElementById('give-amount')?.focus(); return; }
+    if (!phoneOk(phone)) { setMsg('Enter your Mobile Money number, for example 0772 123456.'); document.getElementById('give-phone')?.focus(); return; }
+    setMsg('');
+    setStage('sending');
+    try {
+      const r = await api('/give', { method: 'POST', body: { amount: n, phone, network: method === 'mtn' ? 'MTN' : 'AIRTEL', fund, name } });
+      if (r.redirect) window.open(r.redirect, '_blank', 'noopener');
+      setGift({ ref: r.ref, redirect: r.redirect });
+      setParams({ ref: r.ref }, { replace: true });
+      setStage('waiting');
+      poll(r.ref);
+    } catch (x) {
+      setMsg(x.message);
+      setStage('form');
+    }
+  };
+
+  const again = () => { clearTimeout(timer.current); setParams({}, { replace: true }); setStage('form'); setGift(null); setMsg(''); };
+
+  if (stage === 'waiting') {
+    return (
+      <div className="paywait" role="status" aria-live="polite">
+        <span className="pulse" aria-hidden="true"><Icon name="phone" size={28} /></span>
+        <strong>Check your phone</strong>
+        <span>An {momo.name} prompt has been sent{phone ? ` to ${phone}` : ''}. Enter your PIN to give <b>{amt}</b>. This page updates by itself.</span>
+        {gift?.redirect && <span>If a confirmation page opened, finish there too. <a href={gift.redirect} target="_blank" rel="noopener noreferrer">Open it again</a></span>}
+        <button type="button" className="btn btn-light" onClick={again}>Start again</button>
+      </div>
+    );
+  }
+  if (stage === 'done') {
+    return (
+      <div className="status" tabIndex={-1} ref={(el) => el && el.focus()}>
+        <strong style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 18 }}><Icon name="check" size={22} /> Thank you. Your gift has been received.</strong>
+        <span>UGX {fmt(gift?.amount || n)} for {gift?.fund || fundName}. Reference <b>{gift?.ref}</b>. God bless you.</span>
+        <div><button type="button" className="btn btn-light" onClick={again}>Give again</button></div>
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="grid-2">
+        <label className="field">Your {momo.name} number
+          <input id="give-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="0772 123456" value={phone} onChange={onPhone} />
+        </label>
+        <label className="field">Your name (optional)
+          <input id="give-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value.slice(0, 120))} />
+        </label>
+      </div>
+      {stage === 'failed' && <p className="err" role="alert">{msg || 'The payment did not go through.'} You can try again.</p>}
+      {stage !== 'failed' && msg && <p className="err" role="alert">{msg}</p>}
+      <button className="btn btn-gold givebtn" type="button" onClick={start} disabled={stage === 'sending'}>
+        <Icon name="phone" size={20} /> {stage === 'sending' ? 'Sending prompt…' : n && !err ? `Give ${amt} now` : 'Give now'}
+      </button>
+      <p style={{ margin: 0, color: 'var(--muted)', fontSize: 14, textAlign: 'center' }}>We send a {momo.name} prompt to your phone. You confirm with your PIN. Nobody at the church sees your PIN.</p>
+    </>
+  );
+}
 
 function check(n) {
   if (!n) return 'Enter the amount you would like to give.';
@@ -18,6 +133,7 @@ function check(n) {
 
 export default function Give() {
   const { say } = useOverlay();
+  const { payments } = useLive();
   const [raw, setRaw] = useState('10000');
   const [method, setMethod] = useState('mtn');
   const [fund, setFund] = useState('tithe');
@@ -79,7 +195,11 @@ export default function Give() {
             </div>
           </fieldset>
 
-          {momo && (
+          {momo && payments === 'push' && (
+            <PushPay n={n} err={err} method={method} setMethod={setMethod} fund={fund} fundName={fundName} amt={amt} setTouched={setTouched} />
+          )}
+
+          {momo && payments !== 'push' && (
             err ? (
               <button className="btn btn-gold givebtn" type="button" onClick={() => { setTouched(true); document.getElementById('give-amount')?.focus(); }}>
                 <Icon name="phone" size={20} /> Give now
@@ -92,7 +212,17 @@ export default function Give() {
           )}
 
           <div className="summary" aria-live="polite">
-            {momo ? (
+            {momo && payments === 'push' ? (
+              <>
+                <span className="big">Giving <strong>{amt}</strong> to <strong>{fundName}</strong> by <strong>{momo.name}</strong></span>
+                <ol className="steps">
+                  <li>Type your {momo.name} number and tap <b>Give now</b>.</li>
+                  <li>A prompt appears on your phone. Check the name shows <b>{momo.reg || "Potter's House Outreach Ministries"}</b>, then enter your PIN.</li>
+                  <li>This page shows <b>Thank you</b> when the gift arrives. You also get an SMS from {momo.name}.</li>
+                </ol>
+                <span className="copyrow">No prompt? On your phone dial <b className="dial">{dialCode(method, n || 0)}</b> <CopyButton text={dialCode(method, n || 0)} label="the dial code">Copy code</CopyButton></span>
+              </>
+            ) : momo ? (
               <>
                 <span className="big">Giving <strong>{amt}</strong> to <strong>{fundName}</strong> by <strong>{momo.name}</strong></span>
                 <ol className="steps">

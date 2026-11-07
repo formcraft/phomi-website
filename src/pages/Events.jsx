@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { Banner, Photo, PrayerWhen, Tbc } from '../components/ui.jsx';
 import { EVENTS, TIMES } from '../data.js';
+import { eventCard, useLive } from '../live.jsx';
 
 function EventCard({ e }) {
   return (
@@ -13,13 +14,16 @@ function EventCard({ e }) {
         <p className="kind">{e.kind}</p>
         <h2>{e.name}</h2>
         <p>{e.time} · {e.venue}</p>
+        {e.details && <p style={{ whiteSpace: 'pre-line' }}>{e.details}</p>}
       </div>
     </article>
   );
 }
 
 export default function Events() {
-  const [view, setView] = useState(EVENTS.length ? 'upcoming' : 'upcoming');
+  const { events: live } = useLive();
+  const upcoming = [...live.map(eventCard), ...EVENTS];
+  const [view, setView] = useState('upcoming');
   const weekly = [
     ['Sunday Service', <>{TIMES.sunday}</>, 'SUN', 'sunday-pulpit'],
     ['Prayer Time', <><PrayerWhen /> · {TIMES.prayerTime}</>, 'PRAY', 'kneeling-prayer'],
@@ -38,7 +42,7 @@ export default function Events() {
           <div role="tabpanel">
             {view === 'upcoming' ? (
               <div className="evlist">
-                {EVENTS.length ? EVENTS.map((e) => <EventCard key={e.name + e.day} e={e} />) : (
+                {upcoming.length ? upcoming.map((e) => <EventCard key={e.key || e.name + e.day} e={e} />) : (
                   <div className="empty stack center" style={{ gap: 12 }}>
                     <Icon name="clock" size={40} style={{ color: 'var(--accentText)' }} />
                     <strong style={{ fontFamily: 'var(--head)', fontSize: 22, color: 'var(--dark)' }}>No dated events yet</strong>
