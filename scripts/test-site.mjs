@@ -224,7 +224,7 @@ try {
   await page.click('nav.main .langbtn');
   await page.waitForSelector('h1:has-text("Tufuulibwa abaggya")');
   check('language button switches the site to Luganda', (await page.getAttribute('html', 'lang')) === 'lg' && await page.isVisible('nav.main >> text=Bayibuli'));
-  for (const w of [960, 1280]) {
+  for (const w of [960, 1000, 1080, 1280, 1440]) {
     await page.setViewportSize({ width: w, height: 800 });
     const navH = await page.evaluate(() => document.querySelector('nav.main .in').getBoundingClientRect().height);
     check(`menu bar stays on one line in Luganda at ${w}px`, navH < 60, navH);
