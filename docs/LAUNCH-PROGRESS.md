@@ -12,6 +12,10 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 - The live domain still runs WordPress (LiteSpeed, PHP 8.3, Elementor, AIOSEO, GiveWP). `/api/health` is 404, so the new site is not on the server yet.
 - Old WordPress pages without a redirect yet: `/about-2`, `/contact-2`, `/donation-confirmation`, `/donation-confirmation-2`, `/donation-failed`, `/donation-failed-2`, `/donor-dashboard`, `/donor-dashboard-2`. To add in Phase 1, with a test.
 
+## Open questions
+
+- hPanel has a second website, `church.pottershouseoutreachministriesinternational.com`, showing a WordPress "Coming Soon" page. Ask the owner after launch whether to remove it too. Never deploy to it by mistake: the FTP account and folder must be the main domain's.
+
 ## Steps
 
 | Date | Phase | Step | Status | Still missing |
@@ -23,7 +27,7 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 | 2026-11-08 | 1 | GiveWP donation records exported (if needed) | skipped | Goes with the backup decision |
 | 2026-11-08 | 1 | Redirects for every old address | done | The 8 addresses above now go to /about, /contact or /give. test-phone checks every old sitemap page |
 | 2026-11-08 | 1 | Domain mailboxes noted | done | Owner has a paid Hostinger Email plan, set-up failed before. DNS checked: MX = Hostinger, SPF ok, DMARC p=none, DKIM not found (fix in Phase 4). A google-site-verification TXT already exists (Phase 5). Mailbox: church@ (matches mail_from in the config sample) |
-| 2026-11-08 | 2 | PHP settings | waiting | |
+| 2026-11-08 | 2 | PHP settings | waiting | Owner first opened the **church.** subdomain website (a separate WordPress "Coming Soon" site, its own IP). Settings must be on the main domain's website. Extensions on church. were fine; memory_limit goes up to 1536M, 256M is enough |
 | | 2 | Database and user | to do | |
 | | 2 | phomi-config.php on the server | to do | |
 | | 2 | SSL and Force HTTPS | to do | |
