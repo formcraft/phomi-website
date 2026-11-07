@@ -14,7 +14,42 @@ BASE = f'http://127.0.0.1:{PORT}'
 
 tmp = tempfile.mkdtemp(prefix='phomi-test-')
 web = os.path.join(tmp, 'public_html'); os.makedirs(web)
-os.symlink(API, os.path.join(web, 'api'))
+API_LINK = os.path.join(web, 'api')
+
+
+def link_dir(target, link):
+    """Symlink a folder. On Windows, a symlink needs admin rights or Developer Mode,
+    so fall back to a directory junction (no rights needed), as the Node scripts do."""
+    try:
+        os.symlink(target, link, target_is_directory=True)
+    except OSError:
+        if os.name != 'nt':
+            raise
+        import _winapi
+        _winapi.CreateJunction(target, link)
+
+
+def unlink_dir(link):
+    """Remove the link itself, never the folder it points to."""
+    if os.path.islink(link):
+        os.unlink(link)
+    elif os.path.isdir(link):
+        os.rmdir(link)  # a junction: rmdir removes only the link
+
+
+# Self-test of the two helpers on a scratch folder, before trusting them with the real api/ folder.
+_src, _lnk = os.path.join(tmp, 'link-src'), os.path.join(tmp, 'link-test')
+os.makedirs(_src)
+with open(os.path.join(_src, 'keep.txt'), 'w') as f:
+    f.write('keep')
+link_dir(_src, _lnk)
+assert open(os.path.join(_lnk, 'keep.txt')).read() == 'keep', 'the folder link does not show the files'
+unlink_dir(_lnk)
+assert not os.path.exists(_lnk), 'the folder link was not removed'
+assert os.path.isfile(os.path.join(_src, 'keep.txt')), 'removing the link deleted the real files'
+print('ok  folder link works and removing it keeps the real files')
+
+link_dir(API, API_LINK)
 cfg_path = os.path.join(tmp, 'config.php')
 mail_log = os.path.join(tmp, 'mail.log')
 with open(cfg_path, 'w') as f:
@@ -27,8 +62,12 @@ with open(cfg_path, 'w') as f:
 ];""")
 
 env = dict(os.environ, PHOMI_CONFIG=cfg_path)
+# The PHP server logs every request to stderr. Send it to a file, not a pipe: nobody reads the pipe
+# until the end, and on Windows (small pipe buffer) PHP then blocks after a few dozen requests.
+server_log_path = os.path.join(tmp, 'php-server.log')
+server_log = open(server_log_path, 'wb')
 server = subprocess.Popen(['php', '-S', f'127.0.0.1:{PORT}', '-t', web, os.path.join(API, 'tests', 'router.php')],
-                          env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                          env=env, stdout=subprocess.DEVNULL, stderr=server_log)
 time.sleep(0.8)
 
 jar = http.cookiejar.CookieJar()
@@ -495,11 +534,18 @@ try:
     code, r = call('GET', '/api/admin/lists')
     code2, csv = call('GET', '/api/admin/subscribers.csv', raw=True)
     check('the lists need an admin sign-in', code == 401 and code2 == 401 and '@' not in csv, (code, code2))
+    server_log.flush()
+    check('PHP server log goes to a file, not a pipe that can fill up and hang the server',
+          server.poll() is None and os.path.getsize(server_log_path) > 0, os.path.getsize(server_log_path))
 finally:
     server.terminate()
-    err = server.stderr.read().decode()
+    server.wait(timeout=10)
+    server_log.close()
+    with open(server_log_path, 'rb') as f:
+        err = f.read().decode('utf-8', 'replace')
     if 'Fatal' in err or 'Warning' in err:
         print('\nPHP server log:\n' + '\n'.join(l for l in err.splitlines() if 'Fatal' in l or 'Warning' in l or 'Deprecated' in l)[:3000])
+    unlink_dir(API_LINK)  # before rmtree, so it can never follow the link into the real api/ folder
     shutil.rmtree(tmp, ignore_errors=True)
 
 print(f'\n{len(failures)} failed' if failures else '\nAll API tests passed')
