@@ -74,6 +74,12 @@ def base64_subjects(log):
     return '\n'.join(out)
 
 
+def kampala_today():
+    # The site keeps church time (Africa/Kampala, UTC+3), so "today" must match it, not the test machine's clock
+    from datetime import datetime, timedelta, timezone
+    return (datetime.now(timezone.utc) + timedelta(hours=3)).strftime('%Y-%m-%d')
+
+
 def check(name, cond, info=''):
     print(('PASS ' if cond else 'FAIL ') + name + ('' if cond else f'  -> {info}'))
     if not cond:
@@ -377,9 +383,9 @@ try:
     check('first language for new visitors is saved', c['settings'].get('default_lang') == 'lg', c['settings'].get('default_lang'))
     call('POST', '/api/admin/settings', {'site_theme': '', 'default_lang': 'en'})
 
-    code, r = call('POST', '/api/admin/r/verses', {'show_on': time.strftime('%Y-%m-%d'), 'kind': 'day', 'reference': 'Not a verse 99', 'theme': 'x'})
+    code, r = call('POST', '/api/admin/r/verses', {'show_on': kampala_today(), 'kind': 'day', 'reference': 'Not a verse 99', 'theme': 'x'})
     check('planned verse needs a real reference', code == 422, r)
-    code, r = call('POST', '/api/admin/r/verses', {'show_on': time.strftime('%Y-%m-%d'), 'kind': 'day', 'reference': 'ps 23:1-3', 'theme': 'Trust', 'note': 'Read it slowly today.'})
+    code, r = call('POST', '/api/admin/r/verses', {'show_on': kampala_today(), 'kind': 'day', 'reference': 'ps 23:1-3', 'theme': 'Trust', 'note': 'Read it slowly today.'})
     check('admin plans today\'s verse', code == 200 and r['item']['reference'] == 'Psalm 23:1-3', r)
     vid = r['item']['id']
     code, c = call('GET', '/api/content', admin=False)
@@ -437,7 +443,7 @@ try:
 
     call('POST', '/api/admin/settings', {'letters_on': '1', 'letters_time': '00:00', 'sms_on': '1'})
     code, L = call('GET', '/api/admin/letters')
-    todays = [l for l in L['items'] if l['for_date'] == time.strftime('%Y-%m-%d')]
+    todays = [l for l in L['items'] if l['for_date'] == kampala_today()]
     check('today\'s verse emails are prepared', any(l['kind'] == 'day' for l in todays) and any(l['kind'] == 'sms' for l in todays), [(l['kind'], l['status']) for l in todays])
     day_letter = next(l for l in todays if l['kind'] == 'day')
     code, r = call('POST', f"/api/admin/letters/{day_letter['id']}/pause", {})
