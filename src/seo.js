@@ -49,7 +49,7 @@ export const churchSchema = () => ({
     streetAddress: 'Burweta',
     addressLocality: 'Butebo',
     addressRegion: 'Butebo District',
-    postOfficeBoxNumber: '1972',
+    postOfficeBoxNumber: '260208',
     addressCountry: 'UG',
   },
   areaServed: ['Butebo District', 'Mbale', 'Eastern Uganda'],

@@ -282,7 +282,7 @@ function letter_render(array $l, ?array $s = null): array
 
     $text = ($hello ? "$hello\n\n" : '') . strtoupper($eyebrow) . " · {$v['theme']}\n\n“{$v['text']}”\n{$v['ref']} ($trName)\n"
         . ($note ? "\n$note\n" : '') . "\n" . $W('Read the whole chapter: ', 'Soma essuula yonna: ') . "$read\n" . $W('Share on WhatsApp: ', 'Gabana ku WhatsApp: ') . "$share\n$textSections"
-        . "\n--\nPotter's House Outreach Ministries International\nBurweta, Butebo District · P.O. Box 1972, Mbale, Uganda\n$site\n\n" . $W('Change what you receive or unsubscribe: ', 'Kyusa by’ofuna oba lekera awo: ') . "$manage\n";
+        . "\n--\nPotter's House Outreach Ministries International\nBurweta, Butebo District · P.O. Box 260208, Pallisa, Uganda\n$site\n\n" . $W('Change what you receive or unsubscribe: ', 'Kyusa by’ofuna oba lekera awo: ') . "$manage\n";
 
     $html = '<!doctype html><html><body style="margin:0;background:#F4EDE1"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4EDE1"><tr><td align="center" style="padding:24px 12px">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFCF7;border-radius:12px;overflow:hidden;font-family:Helvetica,Arial,sans-serif;color:#1B2A47;font-size:16px;line-height:1.6">'
@@ -297,7 +297,7 @@ function letter_render(array $l, ?array $s = null): array
         . '<p style="margin:20px 0 0"><a href="' . $h($read) . '" style="display:inline-block;background:#A03207;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:bold;font-size:14px">' . $W('Read the chapter', 'Soma essuula') . '</a> &nbsp; '
         . '<a href="' . $h($share) . '" style="display:inline-block;background:#1B2A47;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:bold;font-size:14px">' . $W('Share on WhatsApp', 'Gabana ku WhatsApp') . '</a></p>'
         . $sections
-        . '</td></tr><tr><td style="padding:18px 24px;border-top:1px solid #E4D9C6;font-size:12px;color:#5B6478">Potter\'s House Outreach Ministries International<br>Burweta, Butebo District · P.O. Box 1972, Mbale, Uganda<br>'
+        . '</td></tr><tr><td style="padding:18px 24px;border-top:1px solid #E4D9C6;font-size:12px;color:#5B6478">Potter\'s House Outreach Ministries International<br>Burweta, Butebo District · P.O. Box 260208, Pallisa, Uganda<br>'
         . '<a href="' . $h($site) . '" style="color:#5B6478">' . $h(preg_replace('#^https?://#', '', $site)) . '</a> · <a href="' . $h($manage) . '" style="color:#5B6478">' . $W('Change what you receive or unsubscribe', 'Kyusa by’ofuna oba lekera awo') . '</a></td></tr>'
         . '</table></td></tr></table></body></html>';
     return [$subject, $text, $html];

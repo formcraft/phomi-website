@@ -230,6 +230,13 @@ try {
   const apiHta = readFileSync(join(ROOT, 'api', '.htaccess'), 'utf8');
   check('Hostinger forces HTTPS and HSTS', /RewriteCond %\{HTTPS\} off/.test(hta) && /Strict-Transport-Security/.test(hta));
   check('Hostinger never serves the code, config, data or tests', /\(lib\|cron\|tests\|vendor\|data\)/.test(apiHta) && /config\\\.php/.test(apiHta));
+  // The church's postal address is written in several files: they must all agree (confirmed by the owner 2026-11-08).
+  const BOX = 'P.O. Box 260208, Pallisa';
+  const addrFiles = ['src/data.js', 'src/text.js', 'api/lib/letters.php'].map((f) => [f, readFileSync(join(ROOT, f), 'utf8')]);
+  const seoSrc = readFileSync(join(ROOT, 'src', 'seo.js'), 'utf8');
+  const badBox = addrFiles.filter(([, s]) => !s.includes(BOX) || /P\.O\. Box (?!260208)\d+/.test(s)).map(([f]) => f);
+  if (!/postOfficeBoxNumber: '260208'/.test(seoSrc)) badBox.push('src/seo.js');
+  check('the church P.O. Box is the same everywhere (site, Google details, verse emails)', badBox.length === 0, badBox.join(', '));
   const deploy = readFileSync(join(ROOT, '.github', 'workflows', 'deploy.yml'), 'utf8');
   const upload = deploy.match(/- name: Upload to Hostinger[^\n]*\n\s*if: ([^\n]+)/)?.[1] || '';
   check('only main is uploaded to the live site (not pull requests or other branches)',
