@@ -230,6 +230,10 @@ try {
   const apiHta = readFileSync(join(ROOT, 'api', '.htaccess'), 'utf8');
   check('Hostinger forces HTTPS and HSTS', /RewriteCond %\{HTTPS\} off/.test(hta) && /Strict-Transport-Security/.test(hta));
   check('Hostinger never serves the code, config, data or tests', /\(lib\|cron\|tests\|vendor\|data\)/.test(apiHta) && /config\\\.php/.test(apiHta));
+  const deploy = readFileSync(join(ROOT, '.github', 'workflows', 'deploy.yml'), 'utf8');
+  const upload = deploy.match(/- name: Upload to Hostinger[^\n]*\n\s*if: ([^\n]+)/)?.[1] || '';
+  check('only main is uploaded to the live site (not pull requests or other branches)',
+    upload.includes("github.ref == 'refs/heads/main'") && upload.includes("github.event_name != 'pull_request'"), upload);
   check('hidden files like .git and .env are never served', /RedirectMatch 404 \/\\\.\(\?!well-known\)/.test(hta));
   for (const p of ['/api/admin/stats', '/api/admin/subscribers.csv', '/api/admin/sms_contacts.csv', '/api/admin/lists', '/api/admin/r/subscribers']) {
     const r = await fetch(BASE + p, { headers: { 'X-PHOMI': '1' } });

@@ -41,9 +41,10 @@ jobs:
 
       # Uploads the built site (dist/, including dist/api) to public_html on Hostinger.
       # Needs repository secrets FTP_SERVER, FTP_USERNAME and FTP_PASSWORD
-      # (Hostinger hPanel → Files → FTP Accounts). Skipped until they are set, and never on pull requests.
+      # (Hostinger hPanel → Files → FTP Accounts). Skipped until they are set. Only main is ever uploaded:
+      # never a pull request, and never another branch started by hand with "Run workflow".
       - name: Upload to Hostinger over FTP
-        if: env.FTP_SERVER != '' && github.event_name != 'pull_request'
+        if: env.FTP_SERVER != '' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ env.FTP_SERVER }}
