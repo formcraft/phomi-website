@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import { img, video } from '../data.js';
+import { useT } from '../i18n.jsx';
 
 const Ctx = createContext(null);
 export const useOverlay = () => useContext(Ctx);
@@ -12,6 +13,7 @@ export function OverlayProvider({ children }) {
   const timer = useRef();
   const closeBtn = useRef();
   const lastFocus = useRef(null);
+  const t = useT();
 
   const say = useCallback((msg) => {
     setToast(msg);
@@ -33,14 +35,14 @@ export function OverlayProvider({ children }) {
 
   const copy = useCallback(
     (text, label) => {
-      const done = () => say(`Copied ${label || text}`);
+      const done = () => say(t('common.copied', { what: label || text }));
       try {
-        navigator.clipboard.writeText(text).then(done, () => say('Press and hold to copy'));
+        navigator.clipboard.writeText(text).then(done, () => say(t('common.pressHold')));
       } catch {
-        say('Press and hold to copy');
+        say(t('common.pressHold'));
       }
     },
-    [say]
+    [say, t]
   );
 
   useEffect(() => {
@@ -64,23 +66,32 @@ export function OverlayProvider({ children }) {
     <Ctx.Provider value={{ open, say, copy }}>
       {children}
       {box && (
-        <div className="lb" role="dialog" aria-modal="true" aria-label="Viewer" onClick={(e) => e.target === e.currentTarget && close()}>
-          <button className="x" type="button" ref={closeBtn} onClick={close} aria-label="Close">
+        <div className="lb" role="dialog" aria-modal="true" aria-label={t('common.viewer')} onClick={(e) => e.target === e.currentTarget && close()}>
+          <button className="x" type="button" ref={closeBtn} onClick={close} aria-label={t('common.close')}>
             <Icon name="close" size={22} />
           </button>
           {box.items.length > 1 && (
             <>
-              <button className="pv" type="button" onClick={() => step(-1)} aria-label="Previous">
+              <button className="pv" type="button" onClick={() => step(-1)} aria-label={t('common.previous')}>
                 <Icon name="left" size={22} />
               </button>
-              <button className="nx" type="button" onClick={() => step(1)} aria-label="Next">
+              <button className="nx" type="button" onClick={() => step(1)} aria-label={t('common.next')}>
                 <Icon name="right" size={22} />
               </button>
             </>
           )}
           <figure>
-            {it.type === 'video' ? (
-              <video key={it.name} controls autoPlay playsInline poster={img('v-' + it.name)}>
+            {it.type === 'embed' ? (
+              <div className={'lb-embed ' + (it.shape || 'wide')}>
+                <iframe key={it.src} src={it.src} title={it.cap} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
+              </div>
+            ) : it.type === 'link' ? (
+              <div className="lb-link">
+                <img src={it.poster || img('v-hall-worship')} alt="" />
+                <a className="btn btn-gold" href={it.href} target="_blank" rel="noopener noreferrer">{t('common.watchOn', { site: it.site })}</a>
+              </div>
+            ) : it.type === 'video' ? (
+              <video key={it.name} controls autoPlay playsInline poster={it.poster ?? img('v-' + it.name)}>
                 <source src={video(it.name)} type="video/mp4" />
               </video>
             ) : (
@@ -88,7 +99,7 @@ export function OverlayProvider({ children }) {
             )}
             <figcaption>
               {it.cap}
-              {it.type !== 'video' && box.items.length > 1 ? ` · ${box.index + 1} of ${box.items.length}` : ''}
+              {it.type === 'img' && box.items.length > 1 ? ` · ${box.index + 1} / ${box.items.length}` : ''}
             </figcaption>
           </figure>
         </div>

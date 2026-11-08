@@ -1,63 +1,94 @@
-# Potter's House Outreach Ministries International — website
+# Potter's House Outreach Ministries International: website
 
 The website for PHOMI (Church & Bible Study), Burweta, Butebo District, Uganda.
-Built with **React + JavaScript** using [Vite](https://vite.dev), hosted on **Hostinger**.
+It lives at **https://pottershouseoutreachministriesinternational.com** and is hosted on **Hostinger**.
+
+- **Website:** React + JavaScript with [Vite](https://vite.dev) (`src/`)
+- **Backend:** plain PHP 8.1+ and MySQL, which every Hostinger plan runs (`api/`)
+- **Admin page:** `/admin`, for sermons, videos, gallery, events, announcements, testimonies, giving, prayer requests and settings, with a **History & undo** list of every change
+- **Automatic updates:** approved people email the church update address with a tag such as `Sermon:` or `Photo: Outreach`. An admin approves each one (in the admin page or with a one-tap link) before it shows on the site.
+- **Videos:** YouTube, TikTok and Facebook links play right on the page; uploaded MP4 clips work too.
+- **Testimonies:** on their own page (in the menu), visitors write a testimony, record a voice note or a short video right on their phone, or choose a file, with an optional picture. Each one waits in Admin → Testimonies until an admin publishes it; the gallery mixes written, voice and video testimonies with a floating picture or initials for each person. Their phone or email is never shown.
+- **Easy to find your way:** a six-item menu with two drop-downs, a "How can we help you today?" chooser on the home page, a *Plan your visit* section, and next steps at the end of every page.
+- **Fast on slow phones:** each page loads only its own code, the others load quietly in the background, the site's shell is saved on the phone (it opens with no signal after the first visit), content shows at once from the phone's last copy, and the server keeps a ready-made answer for the content that is rebuilt only when something changes.
+- **No AI at runtime:** everything runs on plain PHP scripts and rules. Nothing needs an AI service or an API key to work.
+- **English and Luganda:** every page in both languages, with a language button in the menu bar on every page. The choice is remembered, and `?lang=lg` opens a link in Luganda. All text lives in `src/text.js`; the church can change any of it in **Admin → Site text & language**, with font, size, colour, bold and italic, plus the whole-site fonts, colours and text size.
+- **Bible:** the whole Bible (KJV and World English Bible, both public domain, and the Luganda *Bayibuli Entukuvu* from Biblica, CC BY-SA 4.0) at `/bible`, with search, a Verse of the Day and a Verse of the Week from a planned list (never random), share pictures, and *Send to a number* by SMS or WhatsApp from the reader's own phone.
+- **Verse emails and SMS:** members sign up for a morning verse email, a Monday letter (Verse of the Week, latest sermon, coming events) and an optional SMS. Sent by the cron job; an admin can pause, approve or add a message to each one.
+- **Giving:** the giver types their MTN or Airtel number and gets the Mobile Money PIN prompt on their phone (Yo! Payments or Flutterwave). Until a payment account is live, the page falls back to the dial code.
+
+**Want to try it first?** Run the whole site on your own computer with `npm run local`: see [docs/LOCAL-PREVIEW.md](docs/LOCAL-PREVIEW.md).
+
+**Launching?** Start with [docs/INFORMATION-NEEDED.md](docs/INFORMATION-NEEDED.md), then follow [docs/SETUP.md](docs/SETUP.md).
+To go live with Claude Code guiding you step by step (backup, Hostinger, email, Google), use [docs/GO-LIVE-WITH-CLAUDE-CODE.md](docs/GO-LIVE-WITH-CLAUDE-CODE.md).
 
 ## Run it on your computer
 
-You need [Node.js](https://nodejs.org) 20 or newer.
+You need [Node.js](https://nodejs.org) 20+ and PHP 8.1+ (with pdo_sqlite, gd, curl, mbstring, fileinfo). No PHP libraries to install.
 
 ```bash
 npm install
-npm run dev       # opens the site at http://localhost:5173 and reloads as you edit
-npm run build     # makes the finished site in the dist/ folder
-npm run preview   # serves dist/ so you can check the build
+npm run dev                         # the website at http://localhost:5173 (built-in content only)
+npm run build                       # the finished site, backend included, in dist/
+npm run test:api                    # backend tests: SQLite, mock payments, fake mailbox
+npm run test:site                   # browser tests of the built site, desktop and phone (needs Playwright)
+npm run test:phone                  # every page on four phone sizes, offline, plus security checks
+npm run local                       # the whole site on your computer: http://localhost:8080 (add -- --lan for your phone)
 ```
+
+## How the pieces fit
+
+```
+Visitor's browser ──► index.html + React (dist/)
+                         │  loads /api/content (sermons, photos, events, announcements, times)
+                         │  posts /api/give, /api/prayer, /api/contact
+                         ▼
+                    api/index.php ──► MySQL
+                         ▲      └──► Yo! Payments / Flutterwave  ──►  PIN prompt on the giver's phone
+Cron every 5 min ──► api/cron/inbox.php ──► church update mailbox (IMAP) ──► waits in Admin → Emailed updates for approval
+```
+
+If the backend can't be reached, the site still works with the built-in content in `src/data.js`.
 
 ## Where to change things
 
 | What | Where |
 | --- | --- |
-| Phone numbers, WhatsApp, email, Facebook, address | `src/data.js` → `CHURCH` |
-| Prayer Time day, Bible study day and time | `src/data.js` → `TIMES` |
-| Mobile Money numbers and registered names | `src/data.js` → `MOMO` |
-| Bank details | `src/data.js` → `BANK` |
-| Gift amount buttons | `src/data.js` → `AMOUNTS` |
-| Upcoming events | `src/data.js` → `EVENTS` |
-| Photos (gallery and captions) | `public/img/` + `src/data.js` → `PHOTOS` |
-| Videos | `public/video/` + `src/data.js` → `CLIPS` |
+| Sermons, videos, gallery photos, events, announcements, testimonies | **Admin page**, or email the update address |
+| Undo a change (edit, delete, approval, settings) | **Admin → History & undo** |
+| Facebook, YouTube, TikTok, Instagram and WhatsApp links | **Admin → Social links** (they open in a new tab) |
+| Any wording on the site, in English or Luganda, and its font, size and colour | **Admin → Site text & language** (built-in text: `src/text.js`) |
+| The language a first-time visitor sees | **Admin → Site text & language** |
+| Service times, phone numbers, WhatsApp, Mobile Money and bank details | **Admin → Settings** (overrides `src/data.js`) |
+| Verse of the Day / Week for a date | **Admin → Daily verses** (otherwise the built-in list in `api/lib/bible.php`) |
+| Verse emails and SMS: on/off, send time, approval | **Admin → Settings → Bible, verse emails and SMS**; each letter in **Admin → Verse emails & SMS** |
+| Email list and phone list | **Admin → Email list / Phone list** (CSV download on each) |
+| Private address that gets new sign-ups and the lists every Monday | **Admin → Settings → Lists and sign-ups** |
+| Approved senders and who gets alerts | **Admin → Approved senders / Settings** |
+| Built-in photos and videos | `public/img/`, `public/video/` + `src/data.js` → `PHOTOS`, `CLIPS` |
+| Page titles and descriptions for Google, church details for Google Maps | `src/seo.js` (sitemap and robots.txt are made from it at build) |
 | Page text | `src/pages/*.jsx` |
-| Colours, fonts, layout | `src/styles.css` |
+| Colours, fonts, layout | `src/styles.css` (admin: `src/admin/admin.css`) |
 | Logo (Refined Seal) | `src/components/Seal.jsx`, pot artwork in `public/img/pot.png` |
+| Server settings and keys | `phomi-config.php` on the server (template: `api/config.sample.php`); never in GitHub |
+| Database tables | `api/schema.sql` (re-run `/api/install.php?token=…` after adding tables) |
 
-Text the church still needs to supply shows on the site with a gold highlight
-(the `<Tbc>` component). Search for `Tbc` to find every one.
+Text the church still needs to supply shows with a gold highlight (the `<Tbc>` component). Search for `Tbc` to find each one.
 
-## Giving
+## Emailed updates
 
-The Give page lets people type any amount or pick 1,000 – 50,000 UGX. On a phone,
-**Give now** opens the MTN MoMo (`*165#`) or Airtel Money (`*185#`) menu in the dialer.
-Once `MOMO.mtn.num` / `MOMO.airtel.num` are filled in, the church number and amount are
-pre-filled so the giver only enters their PIN. Test one small gift on each network after
-setting the numbers, since networks change their menu paths from time to time.
+| Subject starts with | Goes to |
+| --- | --- |
+| `Sermon: Title` | Sermons. Attach audio or video, or paste a YouTube, TikTok or Facebook link. Lines like `Preacher:`, `Scripture:`, `Date:` fill the details |
+| `Photo: Outreach, caption` | Gallery, under the category named first |
+| `Event: Name` | Events. Use `Date:`, `Time:`, `Venue:` lines |
+| `Announcement: Headline` | Banner on every page. `Until:` sets the end date |
+| `Times: …` | Weekly times. `Prayer day:`, `Prayer time:`, `Bible study day:`… |
+| `Video: Outreach, title` | Videos (Recent Moments on the Sermons and Home pages). Paste YouTube, TikTok or Facebook links, or attach an MP4 |
+| `Testimony: Headline` | Testimonies |
 
-For a payment prompt that pops up on the giver's phone automatically (no dialing), connect
-a payment provider such as Flutterwave or the MTN MoMo Collections API. That needs a small
-server-side script (Hostinger supports PHP or Node.js) to keep the API keys secret.
+Only senders on the approved list are accepted. **Nothing goes live by itself:** every emailed update waits until an admin approves it in Admin → Emailed updates or with the one-tap link in the alert email. Emails without a tag are sorted by simple keyword rules and marked for a closer look. Every change is recorded in Admin → History & undo, where it can be reversed.
 
-## Deploy to Hostinger
+## Deploy
 
-**Option A — automatic (recommended).** Every push to `main` builds the site with GitHub
-Actions and uploads `dist/` to `public_html`. One-time setup:
-
-1. In Hostinger hPanel go to **Files → FTP Accounts** and note the FTP host, username and password.
-2. In this GitHub repo go to **Settings → Secrets and variables → Actions** and add
-   `FTP_SERVER`, `FTP_USERNAME` and `FTP_PASSWORD`.
-3. Push to `main` (or run the workflow from the **Actions** tab).
-
-**Option B — by hand.** Run `npm run build`, then in hPanel open **File Manager →
-public_html**, upload everything inside `dist/` (including the hidden `.htaccess`), and
-extract if you uploaded a zip.
-
-`public/.htaccess` is copied into the build. It turns on HTTPS, makes page links such as
-`/about` and `/give` work when opened directly, and sets sensible caching.
+Every push to `main` runs `.github/workflows/deploy.yml`: PHP lint, API tests, build, then an FTP upload of `dist/` to `public_html`. The upload needs the repository secrets `FTP_SERVER`, `FTP_USERNAME` and `FTP_PASSWORD`, and is skipped until they exist. Pull requests run the tests only. GitHub Actions is free for this public repository, and nothing else on GitHub needs to be paid for (the GitHub command-line tool is not needed). You can also skip GitHub uploads entirely and upload `dist/` by hand. Full steps are in [docs/SETUP.md](docs/SETUP.md).

@@ -17,6 +17,8 @@ export const CHURCH = {
   facebook: 'https://www.facebook.com/share/19w99MmbKY/',
   instagram: '', // add link when ready
   tiktok: '', // add link when ready
+  youtube: '', // the church's YouTube channel, when ready
+  whatsappChannel: '', // the church's WhatsApp Channel link, when ready
   mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Burweta%2C+Butebo+District%2C+Uganda'
 };
 
@@ -47,15 +49,15 @@ export const FUNDS = [
   ['bible-study', 'Bible Study']
 ];
 
+// [path, English label, text key in src/text.js]
+// The menu: six items, two of them drop-downs. [path, text key, short description key]
 export const NAV = [
-  ['/', 'Home'],
-  ['/about', 'About'],
-  ['/ministries', 'Ministries'],
-  ['/sermons', 'Sermons'],
-  ['/events', 'Events'],
-  ['/gallery', 'Gallery'],
-  ['/prayer', 'Prayer Requests'],
-  ['/contact', 'Contact']
+  ['/', 'nav.home'],
+  { key: 'nav.aboutGroup', items: [['/about', 'nav.aboutUs', 'nav.d.about'], ['/ministries', 'nav.ministries', 'nav.d.ministries'], ['/events', 'nav.events', 'nav.d.events']] },
+  { key: 'nav.watchGroup', items: [['/sermons', 'nav.sermons', 'nav.d.sermons'], ['/bible', 'nav.bible', 'nav.d.bible'], ['/gallery', 'nav.gallery', 'nav.d.gallery']] },
+  ['/testimonies', 'nav.testimonies'],
+  ['/prayer', 'nav.prayer'],
+  ['/contact', 'nav.contact'],
 ];
 
 export const VALUES = [
@@ -122,6 +124,11 @@ export const BUILD_STEPS = [
   ['church-tree', 'Today', 'A house of worship', 'A finished home for worship, prayer and Bible study.']
 ];
 
-export const img = (name) => `/img/${name}.jpg`;
-export const video = (name) => `/video/${name}.mp4`;
+// Built-in media live in /public/img and /public/video. Media added from the admin page or by email
+// are full paths under /uploads, and are used as they are.
+const isPath = (name) => /^(\/|https?:)/.test(name);
+export const img = (name) => (isPath(name) ? name : `/img/${name}.jpg`);
+// Phones get the 640px copy in /img/sm (about a fifth of the size); bigger screens the full photo
+export const srcSet = (name) => (isPath(name) ? undefined : `/img/sm/${name}.jpg 640w, /img/${name}.jpg 1080w`);
+export const video = (name) => (isPath(name) ? name : `/video/${name}.mp4`);
 export const fmt = (n) => Number(n).toLocaleString('en-US');
