@@ -31,8 +31,8 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 | 2026-11-08 | 2 | PHP settings | done | Checked from screenshots of the main domain: PHP 8.3, all extensions on, max_execution_time 120, memory_limit 1536M, post_max_size 1024M, upload_max_filesize 1024M. Timezone UTC is fine (the app sets Africa/Kampala). No disabled function is used by api/. Earlier the settings went to church. by mistake. Owner first opened the **church.** subdomain website (a separate WordPress "Coming Soon" site, its own IP). Settings must be on the main domain's website. Extensions on church. were fine; memory_limit goes up to 1536M, 256M is enough |
 | 2026-11-08 | 2 | Database and user | done | Database and user: u131175825_phomi (password kept by the owner only) |
 | 2026-11-08 | 2 | phomi-config.php on the server | done | Goes in /home/u131175825/domains/pottershouseoutreachministriesinternational.com/ (one above public_html). Keys were given in the chat only, never in the repo. Payments and SMS empty |
-| 2026-11-08 | 2 | SSL and Force HTTPS | waiting | |
-| | 3 | GitHub FTP secrets | to do | |
+| 2026-11-08 | 2 | SSL and Force HTTPS | done | Checked from here: Let's Encrypt for the domain and www, valid to 2027-01-23; http already 301s to https |
+| 2026-11-08 | 3 | GitHub FTP secrets | waiting | |
 | | 3 | Remove WordPress files from public_html | to do | No backup (owner's choice). Tell the owner the site is offline for a few minutes until the deploy finishes |
 | | 3 | Merge to main and deploy | to do | |
 | | 3 | Installer and admin account | to do | |
