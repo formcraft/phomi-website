@@ -5,6 +5,7 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 ## Decisions
 
 - 2026-11-08: The owner wants the old WordPress site **fully removed**. Instead of keeping `old-wordpress` for a month (Phase 3 and 7), delete the WordPress files and the WordPress database on launch day, once the new site is live and checked. Old addresses keep working through the 301 redirects in `public/.htaccess`.
+- 2026-11-08: Church P.O. Box is **P.O. Box 260208, Pallisa** (was 1972, Mbale): PR #2. Church account number given by the owner goes in Admin → Settings → Giving details (database), bank name still to be typed in by the owner.
 - 2026-11-08: The owner chose **no backup download** of WordPress (and so no export of the GiveWP donation records). They were told the deletion then cannot be undone, except from any automatic backup Hostinger itself still holds.
 
 ## Found so far
@@ -35,7 +36,7 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 | 2026-11-08 | 3 | GitHub FTP secrets | done | Owner added FTP_SERVER, FTP_USERNAME, FTP_PASSWORD. Branch pushed (gh login for formcraft got the workflow scope); PR #1 checks green. Main FTP account of the main domain: server 72.60.93.183 (= ftp.<domain>), user u131175825.<domain>. Server supports FTPS (AUTH TLS); the deploy uses plain FTP for now. Owner types the three secrets into GitHub. Deploy now only uploads from main |
 | 2026-11-08 | 3 | Remove WordPress files from public_html | done | Moved into old-wordpress beside public_html (delete for good after the live checks). .private left in place. | No backup (owner's choice). Tell the owner the site is offline for a few minutes until the deploy finishes |
 | 2026-11-08 | 3 | Merge to main and deploy | done | PR #1 merged (12c2939). First upload failed: FTP_SERVER secret had extra characters; owner fixed it, rerun green. Live: home 200, /api/health database true, old addresses 301, api/lib 403. /phomi-config.php gives the home page (no secrets), not 404 |
-| 2026-11-08 | 3 | Installer and admin account | waiting | |
+| 2026-11-08 | 3 | Installer and admin account | done | Owner ran the installer, admin formcraftinc@gmail.com created (password known only to the owner). Checked live: KJV, WEB and Luganda (with Biblica credit) answer; CSP, HSTS, nosniff, frame headers on; /wp-login.php 410. Next: remove install_token from phomi-config.php |
 | | 3 | Live checks, testimonies, languages, social links | to do | |
 | | 3 | Luganda read by a native speaker | to do | Who? |
 | | 3 | Delete the old WordPress files and database for good | to do | After the live checks pass |
