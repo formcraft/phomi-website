@@ -33,9 +33,9 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 | 2026-11-08 | 2 | phomi-config.php on the server | done | Goes in /home/u131175825/domains/pottershouseoutreachministriesinternational.com/ (one above public_html). Keys were given in the chat only, never in the repo. Payments and SMS empty |
 | 2026-11-08 | 2 | SSL and Force HTTPS | done | Checked from here: Let's Encrypt for the domain and www, valid to 2027-01-23; http already 301s to https |
 | 2026-11-08 | 3 | GitHub FTP secrets | done | Owner added FTP_SERVER, FTP_USERNAME, FTP_PASSWORD. Branch pushed (gh login for formcraft got the workflow scope); PR #1 checks green. Main FTP account of the main domain: server 72.60.93.183 (= ftp.<domain>), user u131175825.<domain>. Server supports FTPS (AUTH TLS); the deploy uses plain FTP for now. Owner types the three secrets into GitHub. Deploy now only uploads from main |
-| 2026-11-08 | 3 | Remove WordPress files from public_html | waiting | No backup (owner's choice). Tell the owner the site is offline for a few minutes until the deploy finishes |
-| | 3 | Merge to main and deploy | to do | |
-| | 3 | Installer and admin account | to do | |
+| 2026-11-08 | 3 | Remove WordPress files from public_html | done | Moved into old-wordpress beside public_html (delete for good after the live checks). .private left in place. | No backup (owner's choice). Tell the owner the site is offline for a few minutes until the deploy finishes |
+| 2026-11-08 | 3 | Merge to main and deploy | done | PR #1 merged (12c2939). First upload failed: FTP_SERVER secret had extra characters; owner fixed it, rerun green. Live: home 200, /api/health database true, old addresses 301, api/lib 403. /phomi-config.php gives the home page (no secrets), not 404 |
+| 2026-11-08 | 3 | Installer and admin account | waiting | |
 | | 3 | Live checks, testimonies, languages, social links | to do | |
 | | 3 | Luganda read by a native speaker | to do | Who? |
 | | 3 | Delete the old WordPress files and database for good | to do | After the live checks pass |
