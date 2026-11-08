@@ -9,7 +9,7 @@ export const CHURCH = {
     'To transform the spiritual, physical, intellectual, social and economic lives of our community through the power of the gospel of Jesus Christ.',
   mission:
     'To preach the gospel, sensitize and train individuals and communities, and care for their physical and spiritual well-being.',
-  address: ['PHOMI, Burweta, Butebo District', 'P.O. Box 1972, Mbale, Uganda'],
+  address: ['PHOMI, Burweta, Butebo District', 'P.O. Box 260208, Pallisa, Uganda'],
   phones: ['+256 772 496 781', '+256 761 838 682', '+256 775 672 562'],
   whatsapp: '+256 775 672 762',
   whatsappDigits: '256775672762',
