@@ -32,7 +32,7 @@ Where the go-live stands, so a new Claude Code session can carry on. Follows [GO
 | 2026-11-08 | 2 | Database and user | done | Database and user: u131175825_phomi (password kept by the owner only) |
 | 2026-11-08 | 2 | phomi-config.php on the server | done | Goes in /home/u131175825/domains/pottershouseoutreachministriesinternational.com/ (one above public_html). Keys were given in the chat only, never in the repo. Payments and SMS empty |
 | 2026-11-08 | 2 | SSL and Force HTTPS | done | Checked from here: Let's Encrypt for the domain and www, valid to 2027-01-23; http already 301s to https |
-| 2026-11-08 | 3 | GitHub FTP secrets | waiting | |
+| 2026-11-08 | 3 | GitHub FTP secrets | waiting | Main FTP account of the main domain: server 72.60.93.183 (= ftp.<domain>), user u131175825.<domain>. Server supports FTPS (AUTH TLS); the deploy uses plain FTP for now. Owner types the three secrets into GitHub. Deploy now only uploads from main |
 | | 3 | Remove WordPress files from public_html | to do | No backup (owner's choice). Tell the owner the site is offline for a few minutes until the deploy finishes |
 | | 3 | Merge to main and deploy | to do | |
 | | 3 | Installer and admin account | to do | |
